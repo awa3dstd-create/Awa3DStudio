@@ -6,22 +6,29 @@ Este documento describe la configuración de los 3 mirrors del sitio AWA 3D Stud
 
 ---
 
-## ⚠️ IMPORTANTE — Qué URLs compartir con usuarios finales
+## ✅ IMPORTANTE — Qué URL compartir con usuarios finales
 
-**Solo 2 de los 3 mirrors son URLs para compartir con clientes.** El mirror #2 (Cloudflare Worker) NO es una URL para usuarios finales — al abrirla en el navegador solo se ve un JSON con metadata del servicio. Es un backend invisible que el Service Worker usa "por detrás" para failover de los formularios.
+**Solo compartes UNA URL**: https://awa3dstudio.pages.dev/
 
-### URLs que SÍ se comparten (frontend visible)
+El sistema hace el failover **automáticamente**. El usuario nunca tiene que hacer nada: si Cloudflare no carga, el Service Worker (instalado en la primera visita del navegador) prueba el Worker y luego GitHub Pages, todo sin que el usuario note nada.
 
-| # | URL | Cuándo usarla |
+### URL que se comparte (la principal)
+
+| # | URL | Por qué |
 |---|---|---|
-| 🔵 **1 (principal)** | https://awa3dstudio.pages.dev/ | URL normal, la que se comparte en redes sociales, tarjetas, firmas de email, etc. |
-| 🟡 **3 (backup)** | https://awa3dstd-create.github.io/Awa3DStudio/ | Si Cloudflare no carga desde tu ubicación, o si sospechas que Cuba está bloqueando Cloudflare. |
+| 🔵 **1 (principal)** | https://awa3dstudio.pages.dev/ | URL única para compartir en redes sociales, tarjetas, firmas de email, etc. |
+
+### URL de respaldo (NO se comparte, solo se usa en caso de emergencia)
+
+| # | URL | Cuándo usarla manualmente |
+|---|---|---|
+| 🟡 **3 (github)** | https://awa3dstd-create.github.io/Awa3DStudio/ | **Solo** si Cloudflare está caído JUSTO en la primera visita del usuario (el SW aún no se ha instalado y no hay failover posible). Caso rarísimo. |
 
 ### URL que NO se comparte (backend invisible)
 
 | # | URL | Qué pasa si la abres |
 |---|---|---|
-| 🔧 **2 (worker)** | https://awa3d-mirror.dashiellyeneri.workers.dev/ | Verás un JSON con metadata del servicio: `{"ok":true,"service":"awa3d-mirror-worker","version":"1.0.0","endpoints":[...]}`. **Esto es normal** — es un backend de APIs, no un frontend web. |
+| 🔧 **2 (worker)** | https://awa3d-mirror.dashiellyeneri.workers.dev/ | Verás un JSON con metadata del servicio: `{"ok":true,"service":"awa3d-mirror-worker","version":"1.0.0","endpoints":[...]}`. **Esto es normal** — es un backend de APIs, no un frontend web. El SW lo usa "por detrás" para failover de los formularios. |
 
 ### ¿Por qué el Worker no sirve frontend?
 

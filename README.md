@@ -10,19 +10,20 @@
 
 Este repositorio es **mirror #3** del sitio AWA 3D Studio. Los 3 despliegues funcionan como espejos con failover automático vía Service Worker.
 
-> ⚠️ **Importante — qué URLs compartir con usuarios finales**
+> ✅ **URL única para compartir con usuarios finales**
 >
-> Solo **2 URLs** son para compartir con clientes en redes sociales, tarjetas o cualquier material de marketing:
-> - 🔵 **Principal**: https://awa3dstudio.pages.dev/
-> - 🟡 **Backup**: https://awa3dstd-create.github.io/Awa3DStudio/ (si Cloudflare no carga)
+> Solo compartes UNA URL en redes sociales, tarjetas, firmas de email, etc.:
+> - 🔵 **https://awa3dstudio.pages.dev/**
 >
-> La URL del **Worker** (Mirror #2) NO es para usuarios finales — al abrirla en el navegador solo se ve un JSON con metadata del servicio. Es un backend invisible que el Service Worker usa "por detrás" para failover de los formularios.
+> El sistema hace el failover **automáticamente** — el usuario nunca tiene que hacer nada. Si Cloudflare no carga, el Service Worker (instalado en la primera visita) prueba el Worker y luego GitHub Pages sin que el usuario note nada.
+>
+> **Excepción**: si Cloudflare está caído JUSTO en la primera visita del usuario (el SW aún no está instalado), no habrá failover. En ese caso rarísimo, el usuario puede entrar directamente por el backup de GitHub Pages: https://awa3dstd-create.github.io/Awa3DStudio/
 
 | # | URL | Plataforma | Función | ¿Para usuarios finales? |
 |---|---|---|---|---|
-| 1 | https://awa3dstudio.pages.dev/ | Cloudflare Pages | **Principal** — frontend + 4 APIs | ✅ Sí, URL a compartir |
-| 2 | https://awa3d-mirror.dashiellyeneri.workers.dev/ | Cloudflare Worker | **Backup APIs** — solo sirve las 4 APIs, no frontend | ❌ No, es backend invisible |
-| 3 | https://awa3dstd-create.github.io/Awa3DStudio/ | GitHub Pages | **Backup Frontend** — frontend estático, las APIs viajan al Worker/Pages vía SW | ✅ Sí, URL de respaldo |
+| 1 | https://awa3dstudio.pages.dev/ | Cloudflare Pages | **Principal** — frontend + 4 APIs | ✅ Sí, la URL a compartir |
+| 2 | https://awa3d-mirror.dashiellyeneri.workers.dev/ | Cloudflare Worker | **Backup APIs** — solo sirve las 4 APIs, no frontend | ❌ No, es backend invisible usado por el SW |
+| 3 | https://awa3dstd-create.github.io/Awa3DStudio/ | GitHub Pages | **Backup Frontend** — frontend estático, las APIs viajan al Worker/Pages vía SW | ⚠️ Solo si CF cae en primera visita |
 
 ### 🔄 Failover automático
 
