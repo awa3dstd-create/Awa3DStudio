@@ -10,19 +10,27 @@
 
 Este repositorio es **mirror #3** del sitio AWA 3D Studio. Los 3 despliegues funcionan como espejos con failover automático vía Service Worker.
 
-| # | URL | Plataforma | Stack | Función |
+> ⚠️ **Importante — qué URLs compartir con usuarios finales**
+>
+> Solo **2 URLs** son para compartir con clientes en redes sociales, tarjetas o cualquier material de marketing:
+> - 🔵 **Principal**: https://awa3dstudio.pages.dev/
+> - 🟡 **Backup**: https://awa3dstd-create.github.io/Awa3DStudio/ (si Cloudflare no carga)
+>
+> La URL del **Worker** (Mirror #2) NO es para usuarios finales — al abrirla en el navegador solo se ve un JSON con metadata del servicio. Es un backend invisible que el Service Worker usa "por detrás" para failover de los formularios.
+
+| # | URL | Plataforma | Función | ¿Para usuarios finales? |
 |---|---|---|---|---|
-| 1 | https://awa3dstudio.pages.dev | Cloudflare Pages | Next.js + Edge Functions | **Principal** — frontend + APIs |
-| 2 | https://awa3d-mirror.dashiellyeneri.workers.dev | Cloudflare Worker | Worker (JS) | **Backup 1** — frontend + APIs |
-| 3 | https://awa3dstd.github.io/Awa3DStudio | GitHub Pages | Next.js static export | **Backup 2** — frontend, APIs vía Worker |
+| 1 | https://awa3dstudio.pages.dev/ | Cloudflare Pages | **Principal** — frontend + 4 APIs | ✅ Sí, URL a compartir |
+| 2 | https://awa3d-mirror.dashiellyeneri.workers.dev/ | Cloudflare Worker | **Backup APIs** — solo sirve las 4 APIs, no frontend | ❌ No, es backend invisible |
+| 3 | https://awa3dstd-create.github.io/Awa3DStudio/ | GitHub Pages | **Backup Frontend** — frontend estático, las APIs viajan al Worker/Pages vía SW | ✅ Sí, URL de respaldo |
 
 ### 🔄 Failover automático
 
-El sitio incluye un **Service Worker** (`public/sw.js`) que intercepta las peticiones a `/api/*` y prueba los 3 backends en orden:
+El sitio incluye un **Service Worker** (`public/sw.js`) que se instala automáticamente en la primera visita del usuario. Intercepta las peticiones a `/api/*` y prueba los backends en orden:
 
-1. Mismo dominio (donde se sirve el frontend)
-2. `https://awa3dstudio.pages.dev` (Cloudflare Pages)
-3. `https://awa3d-mirror.dashiellyeneri.workers.dev` (Worker)
+1. Mismo dominio (donde se sirve el frontend — Pages o GitHub Pages)
+2. `https://awa3dstudio.pages.dev` (Cloudflare Pages — principal)
+3. `https://awa3d-mirror.dashiellyeneri.workers.dev` (Worker — backup)
 
 El primero que responde exitosamente sirve la respuesta. Si todos fallan, se muestra `/offline.html` con opciones de contacto directo (email + WhatsApp).
 
@@ -124,7 +132,7 @@ El workflow `.github/workflows/deploy-gh-pages.yml` se ejecuta en cada push a `m
 2. Configura GitHub Pages
 3. Build estático con `GITHUB_PAGES=true` (output: 'export', basePath: '/Awa3DStudio')
 4. Sube `out/` como artifact
-5. Deploy automático a `https://awa3dstd.github.io/Awa3DStudio/`
+5. Deploy automático a `https://awa3dstd-create.github.io/Awa3DStudio/`
 
 ---
 

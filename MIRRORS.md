@@ -6,6 +6,29 @@ Este documento describe la configuración de los 3 mirrors del sitio AWA 3D Stud
 
 ---
 
+## ⚠️ IMPORTANTE — Qué URLs compartir con usuarios finales
+
+**Solo 2 de los 3 mirrors son URLs para compartir con clientes.** El mirror #2 (Cloudflare Worker) NO es una URL para usuarios finales — al abrirla en el navegador solo se ve un JSON con metadata del servicio. Es un backend invisible que el Service Worker usa "por detrás" para failover de los formularios.
+
+### URLs que SÍ se comparten (frontend visible)
+
+| # | URL | Cuándo usarla |
+|---|---|---|
+| 🔵 **1 (principal)** | https://awa3dstudio.pages.dev/ | URL normal, la que se comparte en redes sociales, tarjetas, firmas de email, etc. |
+| 🟡 **3 (backup)** | https://awa3dstd-create.github.io/Awa3DStudio/ | Si Cloudflare no carga desde tu ubicación, o si sospechas que Cuba está bloqueando Cloudflare. |
+
+### URL que NO se comparte (backend invisible)
+
+| # | URL | Qué pasa si la abres |
+|---|---|---|
+| 🔧 **2 (worker)** | https://awa3d-mirror.dashiellyeneri.workers.dev/ | Verás un JSON con metadata del servicio: `{"ok":true,"service":"awa3d-mirror-worker","version":"1.0.0","endpoints":[...]}`. **Esto es normal** — es un backend de APIs, no un frontend web. |
+
+### ¿Por qué el Worker no sirve frontend?
+
+Porque Cloudflare Workers tiene un límite de tamaño de script (1 MB comprimido) y no está optimizado para servir archivos estáticos grandes (HTML, CSS, JS, imágenes). El Worker está optimizado para responder rápido a las 4 APIs (`/api/contact`, `/api/enroll`, `/api/quote`, `/api/cron/followup`) en ~50ms. Sirve solo como **backend de failover**: cuando el SW detecta que las APIs del mirror #1 no responden, prueba automáticamente con el Worker.
+
+---
+
 ## 🎯 Arquitectura
 
 ```
@@ -43,7 +66,7 @@ Este documento describe la configuración de los 3 mirrors del sitio AWA 3D Stud
 
 ## 🌐 Los 3 mirrors
 
-### Mirror #1 — Cloudflare Pages (PRINCIPAL)
+### Mirror #1 — Cloudflare Pages (PRINCIPAL — URL para usuarios finales)
 
 | Atributo | Valor |
 |---|---|
@@ -59,7 +82,9 @@ Este documento describe la configuración de los 3 mirrors del sitio AWA 3D Stud
 | Última release | 2026-08-12 (deploy `bba15b02.awa3dstudio.pages.dev`) |
 | Status | ✅ Operativo |
 
-### Mirror #2 — Cloudflare Worker (BACKUP 1)
+### Mirror #2 — Cloudflare Worker (BACKUP 1 — SOLO APIs)
+
+> ⚠️ **NO es para usuarios finales.** Al abrir esta URL en el navegador se ve un JSON con metadata del servicio, no la web. Es un backend invisible usado por el Service Worker para failover de los formularios.
 
 | Atributo | Valor |
 |---|---|
@@ -72,10 +97,11 @@ Este documento describe la configuración de los 3 mirrors del sitio AWA 3D Stud
 | Secrets | 5 secrets (RESEND_API_KEY, NOTION_API_KEY, TELEGRAM_BOT_TOKEN, QUOTE_API_KEY, CRON_SECRET) |
 | Plain vars | 3 (RESEND_FROM_EMAIL, NOTION_LEADS_DB_ID, TELEGRAM_CHAT_ID) |
 | Service Worker | N/A (Worker no sirve static assets, solo APIs) |
+| Frontend | ❌ No sirve frontend HTML — solo JSON para APIs |
 | Última release | 2026-08-12 |
 | Status | ✅ Operativo |
 
-### Mirror #3 — GitHub Pages (BACKUP 2)
+### Mirror #3 — GitHub Pages (BACKUP 2 — URL para usuarios finales cuando CF falla)
 
 | Atributo | Valor |
 |---|---|
