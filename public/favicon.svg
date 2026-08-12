@@ -1,0 +1,7 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AWA 3D Studio">
+  <!-- Black rounded-square background -->
+  <rect width="512" height="512" rx="92" ry="92" fill="#0a0a0f"/>
+  <!-- Studio logo mark in white (same geometry as navbar IconMark) -->
+  <path d="M 56.32 262.17 L 56.32 349.44 L 162.56 349.44 L 164.46 187.23 L 247.94 349.44 L 347.54 349.44 L 252.68 161.61 L 157.82 161.61 Z" fill="#ffffff"/>
+  <path d="M 309.60 161.61 L 309.60 212.84 L 382.64 274.50 L 382.64 349.44 L 454.73 349.44 L 454.73 228.96 L 373.15 161.61 Z" fill="#ffffff"/>
+</svg>

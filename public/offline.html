@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offline — AWA 3D Studio</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0a0a0f;
+      color: #e4e4e7;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      text-align: center;
+    }
+    .container { max-width: 540px; }
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 2rem;
+      color: #fff;
+    }
+    .logo span { color: #71717a; }
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0 0 1rem;
+      color: #fff;
+      letter-spacing: -0.03em;
+    }
+    p {
+      font-size: 1rem;
+      line-height: 1.6;
+      color: #a1a1aa;
+      margin: 0 0 2rem;
+    }
+    .btn {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background: #fff;
+      color: #0a0a0f;
+      text-decoration: none;
+      font-weight: 600;
+      border-radius: 0.5rem;
+      margin: 0.25rem;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn.outline {
+      background: transparent;
+      color: #e4e4e7;
+      border: 1px solid #27272a;
+    }
+    .contact {
+      margin-top: 2.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #1e1e2a;
+      font-size: 0.875rem;
+      color: #71717a;
+    }
+    .contact a { color: #a1a1aa; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">Awa3DStudio<span>™</span></div>
+    <h1>Estás sin conexión</h1>
+    <p>Parece que no hay internet o los servidores están temporalmente inaccesibles. No te preocupes, podemos continuar por otros canales.</p>
+    <div>
+      <a href="mailto:awa3dstd@gmail.com" class="btn">Enviar email</a>
+      <a href="https://wa.me/5351234567" class="btn outline">WhatsApp</a>
+    </div>
+    <div class="contact">
+      <p>Email: <a href="mailto:awa3dstd@gmail.com">awa3dstd@gmail.com</a></p>
+      <p>Teléfono: <a href="tel:+5351234567">+53 5 123 4567</a></p>
+      <p>La Habana, Cuba</p>
+      <p style="margin-top:1rem">Vuelve a intentar cuando tengas conexión.</p>
+    </div>
+  </div>
+  <script>
+    // Auto-retry cuando vuelva la conexión
+    window.addEventListener('online', () => location.reload());
+  </script>
+</body>
+</html>
