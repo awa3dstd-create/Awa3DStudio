@@ -1,0 +1,26 @@
+name = "awa3d-mirror"
+main = "cloudflare/worker.js"
+compatibility_date = "2024-11-01"
+account_id = "29b40f5c76f58a5e101d22226337cf46"
+
+# Workers Routes — accessible at https://awa3d-mirror.<account-subdomain>.workers.dev
+workers_dev = true
+
+# Cron Trigger — runs daily at 09:00 UTC (same as cron-job.org)
+# Acts as backup if cron-job.org fails
+[triggers]
+crons = ["0 9 * * *"]
+
+# ============= Environment variables (non-secret) =============
+[vars]
+RESEND_FROM_EMAIL = "AWA 3D Studio <onboarding@resend.dev>"
+NOTION_LEADS_DB_ID = "3b2a27d9-bea4-8129-87ac-f25755cb0ee7"
+TELEGRAM_CHAT_ID = "1157170156"
+
+# ============= Secrets (via `wrangler secret put`) =============
+# These are NOT defined here — set them via:
+#   wrangler secret put RESEND_API_KEY
+#   wrangler secret put NOTION_API_KEY
+#   wrangler secret put TELEGRAM_BOT_TOKEN
+#   wrangler secret put QUOTE_API_KEY
+#   wrangler secret put CRON_SECRET

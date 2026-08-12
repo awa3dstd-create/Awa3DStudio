@@ -34,18 +34,12 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Configure GitHub Pages
-        id: pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: "true"
-
       - name: Build (static export)
         env:
           GITHUB_PAGES: "true"
           GITHUB_REPOSITORY: ${{ github.repository }}
-          NEXT_PUBLIC_SITE_URL: ${{ steps.pages.outputs.origin }}
-          NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          NEXT_PUBLIC_SITE_URL: https://awa3dstd-create.github.io/Awa3DStudio/
+          NEXT_PUBLIC_BASE_PATH: /Awa3DStudio
         run: bun run build:gh-pages
 
       - name: Verify build output
@@ -58,9 +52,6 @@ jobs:
           ls -la out/sw.js
           echo "=== offline.html exists? ==="
           ls -la out/offline.html
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
