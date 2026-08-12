@@ -48,6 +48,13 @@ export interface ProcessResult {
     notion: Awaited<ReturnType<typeof createLeadInNotion>>;
     telegram: Awaited<ReturnType<typeof sendTelegramMessage>>;
   };
+  // The plan HTML that was emailed to the lead. Returned to the API caller
+  // so the front-end can display it as a fallback when email delivery fails
+  // (e.g. Gmail filtering `onboarding@resend.dev` in trial mode).
+  planHtml?: string;
+  planSubject?: string;
+  trialMode?: boolean;
+  leadEmail?: string;
 }
 
 export function validateLead(input: IncomingLead): {
@@ -205,5 +212,17 @@ export async function processLead(
 
   // The HTTP response is ok:true as long as the request was valid.
   // Individual failures are surfaced in `results` for transparency.
-  return { ok: true, status: 200, results };
+  return {
+    ok: true,
+    status: 200,
+    results,
+    // Include the plan HTML in the response so the front-end can display it
+    // as a fallback when email delivery fails. This is critical because
+    // Resend trial mode uses `onboarding@resend.dev` which Gmail often
+    // filters to spam or blocks entirely.
+    planHtml: autoResponseHtml,
+    planSubject: autoResponseSubject,
+    trialMode: trial,
+    leadEmail: lead.email,
+  };
 }

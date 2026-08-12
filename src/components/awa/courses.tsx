@@ -450,6 +450,11 @@ function EnrollmentDialog({
   onClose: () => void;
 }) {
   const [submitting, setSubmitting] = useState(false);
+  // Plan HTML recibido del backend tras la inscripción exitosa.
+  // Se muestra en un diálogo aparte como fallback cuando el email no llega
+  // (Gmail filtra onboarding@resend.dev en modo trial).
+  const [planHtml, setPlanHtml] = useState<string | null>(null);
+  const [planSubject, setPlanSubject] = useState<string>("");
   // Pre-fill the country field with the IP-detected country name.
   // useEffect sincroniza el formulario cada vez que `detectedCountry` se actualiza
   // (la detección de IP es async y puede llegar después de montado el componente)
@@ -507,6 +512,7 @@ function EnrollmentDialog({
         let success = false;
         let lastErr: any = null;
         let validationError: string | null = null;
+        let planData: { planHtml?: string; planSubject?: string; trialMode?: boolean } = {};
         for (const url of endpoints) {
           try {
             const controller = new AbortController();
@@ -520,6 +526,19 @@ function EnrollmentDialog({
             clearTimeout(timeout);
             if (res.ok) {
               success = true;
+              // Captura el HTML del plan si el backend lo devuelve
+              try {
+                const data = await res.json();
+                if (data && typeof data.planHtml === "string") {
+                  planData = {
+                    planHtml: data.planHtml,
+                    planSubject: data.planSubject,
+                    trialMode: data.trialMode,
+                  };
+                }
+              } catch {
+                /* JSON parse falla → no hay plan para mostrar */
+              }
               break;
             } else if (res.status >= 400 && res.status < 500) {
               const data = await res.json().catch(() => ({}));
@@ -534,10 +553,25 @@ function EnrollmentDialog({
           }
         }
         if (success) {
-          toast.success("¡Inscripción enviada! Te enviamos el plan del curso por email.");
-          setForm({ name: "", email: "", country: detectedCountry || region.label });
-          setCountryTouched(false);
-          onClose();
+          if (planData.trialMode) {
+            // Modo trial: el email va al inbox del estudio, no al lead.
+            // Mostrar el plan aquí mismo como fallback.
+            toast.success(
+              "¡Inscripción recibida! Te mostramos el plan de mentoría a continuación."
+            );
+          } else {
+            toast.success("¡Inscripción enviada! Te enviamos el plan del curso por email.");
+          }
+          // Guardar el plan para mostrarlo en el diálogo de resultado
+          if (planData.planHtml) {
+            setPlanHtml(planData.planHtml);
+            setPlanSubject(planData.planSubject || "Plan de mentoría");
+          } else {
+            // No hay plan HTML → cerrar el diálogo de inscripción
+            setForm({ name: "", email: "", country: detectedCountry || region.label });
+            setCountryTouched(false);
+            onClose();
+          }
         } else if (validationError) {
           toast.error(validationError);
         } else if (!lastErr || (lastErr.message && !lastErr.message.startsWith("HTTP 4"))) {
@@ -627,6 +661,68 @@ function EnrollmentDialog({
             {submitting ? "Enviando..." : "Confirmar inscripción"}
           </Button>
         </form>
+      </DialogContent>
+
+      {/* Diálogo con el plan de mentoría tras inscripción exitosa.
+          Se muestra como fallback cuando el email no llega (modo trial de
+          Resend: Gmail filtra onboarding@resend.dev). */}
+      <PlanDisplayDialog
+        html={planHtml}
+        subject={planSubject}
+        courseName={course?.name}
+        onClose={() => {
+          setPlanHtml(null);
+          setPlanSubject("");
+          setForm({ name: "", email: "", country: detectedCountry || region.label });
+          setCountryTouched(false);
+          onClose();
+        }}
+      />
+    </Dialog>
+  );
+}
+
+/**
+ * Diálogo scrollable que renderiza el HTML del plan de mentoría recibido del
+ * backend. Se usa `dangerouslySetInnerHTML` porque el HTML ya fue generado
+ * por el backend con plantillas controladas (sin input del usuario crudo).
+ */
+function PlanDisplayDialog({
+  html,
+  subject,
+  courseName,
+  onClose,
+}: {
+  html: string | null;
+  subject: string;
+  courseName?: string;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open={!!html} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="bg-[#0f0f17] border-[#1e1e2a] text-white max-w-3xl max-h-[90vh] overflow-y-auto p-8">
+        <DialogHeader>
+          <DialogTitle className="font-heading font-bold text-2xl text-white">
+            {subject || `Plan de mentoría${courseName ? ` — ${courseName}` : ""}`}
+          </DialogTitle>
+          <DialogDescription className="text-[#a1a1aa] text-sm mt-2">
+            También te enviamos este plan por email. Si no lo recibes en los próximos
+            minutos, revisa tu carpeta de spam o promociones.
+          </DialogDescription>
+        </DialogHeader>
+        <div
+          className="mt-4 prose prose-invert max-w-none"
+          dangerouslySetInnerHTML={{ __html: html || "" }}
+        />
+        <div className="mt-6 flex justify-end gap-3">
+          <Button
+            type="button"
+            onClick={onClose}
+            className="bg-[#00c8b4] text-[#0a0a0f] hover:bg-[#00e5d0] font-semibold"
+          >
+            Cerrar
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

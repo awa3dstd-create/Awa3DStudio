@@ -572,7 +572,17 @@ async function processLead(env, input, request, opts) {
     telegram: pick(telegramRes, { ok: false, error: "Promise rejected" }),
   };
 
-  return { ok: true, status: 200, results };
+  return {
+    ok: true,
+    status: 200,
+    results,
+    // Include plan HTML in response so caller (front-end) can display it
+    // as a fallback when email delivery fails (Gmail filters onboarding@resend.dev).
+    planHtml: autoResponseHtml,
+    planSubject: autoResponseSubject,
+    trialMode: trial,
+    leadEmail: lead.email,
+  };
 }
 
 // ============= QUOTE GENERATOR (simplified for mirror) =============

@@ -65,7 +65,16 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json(
-    { ok: result.ok, results: result.results },
+    {
+      ok: result.ok,
+      results: result.results,
+      // Return the plan HTML so the front-end can display it as a fallback
+      // when email delivery fails (Gmail filters onboarding@resend.dev).
+      planHtml: result.planHtml,
+      planSubject: result.planSubject,
+      trialMode: result.trialMode,
+      leadEmail: result.leadEmail,
+    },
     {
       status: result.status,
       headers: { "Access-Control-Allow-Origin": "*" },
