@@ -451,13 +451,27 @@ function EnrollmentDialog({
 }) {
   const [submitting, setSubmitting] = useState(false);
   // Pre-fill the country field with the IP-detected country name.
-  // `key` on the form forces re-mount when `course` changes so the field
-  // re-syncs with the latest detectedCountry value each time the dialog opens.
+  // useEffect sincroniza el formulario cada vez que `detectedCountry` se actualiza
+  // (la detección de IP es async y puede llegar después de montado el componente)
+  // o cuando se abre el modal con un nuevo `course`.
   const [form, setForm] = useState({
     name: "",
     email: "",
     country: detectedCountry || region.label,
   });
+  // Trackea si el usuario editó manualmente el campo país para no sobreescribirlo
+  const [countryTouched, setCountryTouched] = useState(false);
+
+  useEffect(() => {
+    // Solo auto-actualizar si el usuario no ha editado el campo manualmente
+    if (!countryTouched && (detectedCountry || region.label)) {
+      setForm((f) => ({
+        ...f,
+        country: detectedCountry || region.label,
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detectedCountry, region.label, course?.id]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -482,6 +496,13 @@ function EnrollmentDialog({
             region.prices[course.id as keyof typeof region.prices],
             region.symbol
           )} ${region.currency}.`,
+          // Metadatos extra para que el backend sepa qué plan enviar
+          courseId: course.id,
+          courseName: course.name,
+          courseTagline: course.tagline,
+          coursePrice: region.prices[course.id as keyof typeof region.prices],
+          courseCurrency: region.currency,
+          courseRegion: region.label,
         };
         let success = false;
         let lastErr: any = null;
@@ -489,7 +510,7 @@ function EnrollmentDialog({
         for (const url of endpoints) {
           try {
             const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 5000);
+            const timeout = setTimeout(() => controller.abort(), 8000);
             const res = await fetch(url, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -513,8 +534,9 @@ function EnrollmentDialog({
           }
         }
         if (success) {
-          toast.success("¡Solicitud de inscripción enviada! Te contactaremos en 24h.");
+          toast.success("¡Inscripción enviada! Te enviamos el plan del curso por email.");
           setForm({ name: "", email: "", country: detectedCountry || region.label });
+          setCountryTouched(false);
           onClose();
         } else if (validationError) {
           toast.error(validationError);
@@ -538,8 +560,8 @@ function EnrollmentDialog({
             Inscripción · {course?.name}
           </DialogTitle>
           <DialogDescription className="text-[#a1a1aa] text-sm mt-2">
-            Completa el formulario y te enviaremos los pasos de pago y acceso
-            al curso. Precio aplicado:{" "}
+            Completa el formulario y te enviaremos por email el plan de mentoría
+            detallado del curso. Precio aplicado:{" "}
             <span className="text-[#00c8b4] font-semibold">
               {course &&
                 formatPrice(
@@ -582,13 +604,16 @@ function EnrollmentDialog({
           </div>
           <div>
             <Label htmlFor="enroll-country" className="text-xs uppercase tracking-wider text-[#a1a1aa]">
-              País {detectedCountry && <span className="text-[#00c8b4] normal-case tracking-normal font-normal ml-1">(detectado automáticamente)</span>}
+              País {detectedCountry && <span className="text-[#00c8b4] normal-case tracking-normal font-normal ml-1">(detectado: {detectedCountry})</span>}
             </Label>
             <Input
               id="enroll-country"
               type="text"
               value={form.country}
-              onChange={(e) => setForm({ ...form, country: e.target.value })}
+              onChange={(e) => {
+                setForm({ ...form, country: e.target.value });
+                setCountryTouched(true);
+              }}
               className="bg-[#0a0a0f] border-[#1e1e2a] text-white mt-2 focus:border-[#00c8b4]"
               placeholder="Tu país"
             />

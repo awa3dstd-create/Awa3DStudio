@@ -3,6 +3,10 @@
  *
  * Both endpoints accept the same shape (name/email/phone/service/message)
  * and differ only in `source` and which auto-response template is used.
+ *
+ * For `source: "course"`, the caller may pass extra fields (courseId,
+ * courseName, courseTagline, coursePrice, courseCurrency, courseRegion) that
+ * trigger the detailed mentorship plan email instead of the generic one.
  */
 
 import { sendEmail, isTrialMode } from "@/lib/email";
@@ -11,6 +15,7 @@ import { sendTelegramMessage } from "@/lib/telegram";
 import {
   autoResponseContactHtml,
   autoResponseEnrollHtml,
+  coursePlanHtmlFor,
   notificationHtml,
   telegramMessage,
   forwardReadyWrapper,
@@ -25,6 +30,13 @@ export interface IncomingLead {
   phone?: unknown;
   service?: unknown;
   message?: unknown;
+  // Course-enrollment extras (optional, only used when source="course")
+  courseId?: unknown;
+  courseName?: unknown;
+  courseTagline?: unknown;
+  coursePrice?: unknown;
+  courseCurrency?: unknown;
+  courseRegion?: unknown;
 }
 
 export interface ProcessResult {
@@ -70,11 +82,21 @@ export function validateLead(input: IncomingLead): {
 /**
  * Process a lead end-to-end.
  * `source` and `courseName` customize the auto-response template.
+ *
+ * For `source: "course"`, if `courseId` is provided, the detailed mentorship
+ * plan email is sent instead of the generic "Recibimos tu inscripción" template.
  */
 export async function processLead(
   input: IncomingLead,
   req: Request,
-  opts: { source: "contact" | "course"; courseName?: string }
+  opts: {
+    source: "contact" | "course";
+    courseName?: string;
+    courseId?: string;
+    courseTagline?: string;
+    coursePrice?: string; // pre-formatted string, e.g. "$25 USD"
+    courseRegion?: string;
+  }
 ): Promise<ProcessResult> {
   const validation = validateLead(input);
   if (!validation.ok || !validation.data) {
@@ -101,8 +123,21 @@ export async function processLead(
     ip,
   };
 
-  const autoResponseHtml =
-    opts.source === "course" && opts.courseName
+  // Pick the auto-response HTML:
+  // - course + courseId → detailed mentorship plan
+  // - course (no courseId) → generic enroll template
+  // - contact → contact template
+  const hasCoursePlan = opts.source === "course" && opts.courseId && opts.courseName;
+
+  const autoResponseHtml = hasCoursePlan
+    ? coursePlanHtmlFor(opts.courseId!, {
+        name: lead.name,
+        courseName: opts.courseName!,
+        courseTagline: opts.courseTagline || "",
+        price: opts.coursePrice || "",
+        region: opts.courseRegion || "",
+      })
+    : opts.source === "course" && opts.courseName
       ? autoResponseEnrollHtml(lead.name, opts.courseName)
       : autoResponseContactHtml(lead.name);
 
@@ -111,13 +146,16 @@ export async function processLead(
   // (which would fail with 403 because of Resend's trial restriction).
   const trial = isTrialMode();
 
+  const autoResponseSubject = hasCoursePlan
+    ? `Plan de mentoría — ${opts.courseName} · AWA 3D Studio`
+    : opts.source === "course"
+      ? `Inscripción recibida — AWA 3D Studio`
+      : "Recibimos tu solicitud — AWA 3D Studio";
+
   const autoResponsePayload = trial
     ? {
         to: INBOX,
-        subject:
-          opts.source === "course"
-            ? `[REENVIAR A ${lead.email}] Inscripción recibida — AWA 3D Studio`
-            : `[REENVIAR A ${lead.email}] Recibimos tu solicitud — AWA 3D Studio`,
+        subject: `[REENVIAR A ${lead.email}] ${autoResponseSubject}`,
         html: forwardReadyWrapper({
           leadEmail: lead.email,
           leadName: lead.name,
@@ -127,10 +165,7 @@ export async function processLead(
       }
     : {
         to: lead.email,
-        subject:
-          opts.source === "course"
-            ? `Inscripción recibida — AWA 3D Studio`
-            : "Recibimos tu solicitud — AWA 3D Studio",
+        subject: autoResponseSubject,
         html: autoResponseHtml,
         replyTo: INBOX,
       };

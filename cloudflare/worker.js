@@ -200,6 +200,248 @@ function autoResponseEnrollHtml(name, courseName) {
 </div>`;
 }
 
+// ============= DETAILED COURSE PLAN TEMPLATES =============
+// (Simplified version for the Worker — same content as src/lib/templates.ts)
+function escapeHtmlStr(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+const PLAN_HEADER = (courseName, tagline) => `
+  <div style="background:#0f0f17;border:1px solid #1e1e2a;border-radius:8px;padding:24px;margin:0 0 32px;">
+    <p style="margin:0 0 8px;color:#71717a;font-size:11px;text-transform:uppercase;letter-spacing:0.15em;font-weight:700;">Plan de mentoría</p>
+    <h1 style="color:#ffffff;font-size:26px;font-weight:700;margin:0 0 8px;">${escapeHtmlStr(courseName)}</h1>
+    <p style="color:#00c8b4;font-size:14px;margin:0;font-style:italic;">${escapeHtmlStr(tagline)}</p>
+  </div>
+`;
+
+const PLAN_BLOCK = (title, items) => `
+  <h2 style="color:#00c8b4;font-size:14px;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;margin:24px 0 12px;border-bottom:1px solid #1e1e2a;padding-bottom:8px;">${escapeHtmlStr(title)}</h2>
+  <ul style="list-style:none;padding:0;margin:0;">
+    ${items.map(it => `
+      <li style="color:#a1a1aa;font-size:14px;line-height:1.7;margin:0 0 8px;padding-left:24px;position:relative;">
+        <span style="position:absolute;left:0;color:#00c8b4;font-weight:700;">▸</span>${escapeHtmlStr(it)}
+      </li>`).join("")}
+  </ul>
+`;
+
+const PLAN_PRICE_BOX = (price, region) => `
+  <div style="background:#0f0f17;border:2px solid #00c8b4;border-radius:8px;padding:20px;margin:32px 0;text-align:center;">
+    <p style="margin:0 0 8px;color:#71717a;font-size:11px;text-transform:uppercase;letter-spacing:0.15em;font-weight:700;">Inversión (región: ${escapeHtmlStr(region)})</p>
+    <p style="margin:0 0 12px;color:#00c8b4;font-size:32px;font-weight:700;">${escapeHtmlStr(price)}</p>
+    <p style="margin:0;color:#71717a;font-size:12px;">Pago único · Acceso inmediato tras confirmación</p>
+  </div>
+`;
+
+const PLAN_NEXT_STEPS = `
+  <h2 style="color:#00c8b4;font-size:14px;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;margin:32px 0 12px;border-bottom:1px solid #1e1e2a;padding-bottom:8px;">Próximos pasos</h2>
+  <ol style="padding-left:20px;margin:0;color:#a1a1aa;font-size:14px;line-height:1.8;">
+    <li style="margin-bottom:8px;">Recibirás en las próximas <strong style="color:#00c8b4;">24 horas</strong> un correo con los pasos de pago y métodos disponibles (transferencia, tarjeta, cripto).</li>
+    <li style="margin-bottom:8px;">Una vez confirmado el pago, te crearemos tu cuenta en la plataforma y recibirás tus credenciales de acceso.</li>
+    <li style="margin-bottom:8px;">Tendrás acceso al Discord privado de la comunidad AWA, donde podrás hacer preguntas y compartir avances.</li>
+    <li style="margin-bottom:8px;">Si el curso incluye mentoría 1:1, te contactaremos para coordinar la primera sesión.</li>
+  </ol>
+  <p style="color:#a1a1aa;font-size:14px;line-height:1.6;margin:24px 0 0;">
+    ¿Alguna duda? Escríbenos a
+    <a href="mailto:awa3dstd@gmail.com" style="color:#00c8b4;text-decoration:none;">awa3dstd@gmail.com</a>
+    o por WhatsApp al <strong style="color:#ffffff;">+53 5 123 4567</strong>.
+  </p>
+`;
+
+const SHELL = (inner) => `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AWA 3D Studio · Plan de mentoría</title>
+</head>
+<body style="margin:0;padding:0;background:#0a0a0f;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#e4e4e7;">
+  <div style="max-width:560px;margin:0 auto;padding:48px 24px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="display:inline-block;padding:8px 16px;border:1px solid #1e1e2a;border-radius:6px;background:#0f0f17;">
+        <span style="color:#00c8b4;font-weight:700;letter-spacing:0.05em;">AWA 3D STUDIO</span>
+      </div>
+    </div>
+    ${inner}
+    <hr style="border:none;border-top:1px solid #1e1e2a;margin:32px 0;">
+    <p style="color:#71717a;font-size:13px;line-height:1.5;">
+      AWA 3D Studio · La Habana, Cuba<br>
+      <a href="https://awa3dstudio.pages.dev" style="color:#71717a;text-decoration:none;">awa3dstudio.pages.dev</a>
+    </p>
+  </div>
+</body>
+</html>`;
+
+function coursePlanBasicHtml(d) {
+  return SHELL(`
+    ${PLAN_HEADER(d.courseName, d.courseTagline)}
+    <p style="color:#a1a1aa;font-size:16px;line-height:1.6;margin:0 0 24px;">
+      ¡Hola <strong style="color:#ffffff;">${escapeHtmlStr(d.name)}</strong>! Gracias por tu interés en el
+      <strong style="color:#00c8b4;">${escapeHtmlStr(d.courseName)}</strong>. Adjuntamos el plan completo de mentoría para que sepas exactamente qué vas a aprender.
+    </p>
+    ${PLAN_BLOCK("Objetivos del curso", [
+      "Dominar la interfaz y navegación 3D en software profesional (Blender/SketchUp)",
+      "Crear modelos arquitectónicos básicos: habitaciones, mobiliario simple, escaleras",
+      "Aplicar materiales básicos y exportar modelos en formatos estándar (OBJ, FBX, GLB)",
+      "Comprender el flujo de trabajo desde el brief hasta la entrega final",
+    ])}
+    ${PLAN_BLOCK("Estructura del programa (12 horas)", [
+      "Módulo 1 — Interfaz y navegación 3D (2h): viewports, ejes, snaps, atajos",
+      "Módulo 2 — Modelado de espacios residenciales (4h): paredes, suelos, techos, puertas",
+      "Módulo 3 — Mobiliario y objetos simples (3h): sillas, mesas, sofás desde primitivas",
+      "Módulo 4 — Materiales y texturas básicas (2h): UV mapping introductorio, color, roughness",
+      "Módulo 5 — Exportación y entregables (1h): formatos, optimización, presentación al cliente",
+    ])}
+    ${PLAN_BLOCK("Proyecto guiado", [
+      "Modelado completo de un espacio residencial de 60 m²",
+      "Entrega final: 3 renders + 1 planta 3D + 1 walkthrough animado de 15s",
+      "Feedback personalizado del mentor sobre tu proyecto",
+    ])}
+    ${PLAN_BLOCK("Incluye", [
+      "12 horas de video on-demand (acceso 6 meses)",
+      "Proyecto guiado paso a paso con feedback",
+      "Acceso a comunidad Discord",
+      "Certificado de finalización PDF",
+      "Soporte por email (respuesta en 48h)",
+    ])}
+    ${PLAN_PRICE_BOX(d.price, d.region)}
+    ${PLAN_NEXT_STEPS}
+  `);
+}
+
+function coursePlanIntermediateHtml(d) {
+  return SHELL(`
+    ${PLAN_HEADER(d.courseName, d.courseTagline)}
+    <p style="color:#a1a1aa;font-size:16px;line-height:1.6;margin:0 0 24px;">
+      ¡Hola <strong style="color:#ffffff;">${escapeHtmlStr(d.name)}</strong>! Gracias por tu interés en el
+      <strong style="color:#00c8b4;">${escapeHtmlStr(d.courseName)}</strong>. Este es el plan completo de mentoría para llevar tus renders al siguiente nivel.
+    </p>
+    ${PLAN_BLOCK("Objetivos del curso", [
+      "Dominar el sistema PBR (Physically Based Rendering) y crear materiales fotorrealistas",
+      "Configurar iluminación HDRI profesional para interiores y exteriores",
+      "Componer cámaras virtuales con reglas cinematográficas aplicadas a la arquitectura",
+      "Post-producción en Photoshop/DaVinci para acabado premium",
+    ])}
+    ${PLAN_BLOCK("Estructura del programa (20 horas)", [
+      "Módulo 1 — Materiales PBR avanzados (4h): difusa, roughness, metalness, normal, displacement",
+      "Módulo 2 — Librería de 50 materiales profesionales (2h): madera, mármol, tela, metal, vidrio",
+      "Módulo 3 — Iluminación HDRI para interiores (4h): setup de 3 puntos, ambiente, accent light",
+      "Módulo 4 — Iluminación HDRI para exteriores (3h): sol, sombras, atmósfera, golden hour",
+      "Módulo 5 — Cámaras virtuales (3h): focal length, profundidad de campo, composición clásica",
+      "Módulo 6 — Post-producción (4h): passes (Z, AO, Cryptomatte), color grading, retoque",
+    ])}
+    ${PLAN_BLOCK("Proyecto guiado", [
+      "Render fotorrealista de un interior completo (cocina o salón) con iluminación natural",
+      "Entrega: 5 renders finales 4K + 1 animación de cámara de 10s + 1 variante de materiales",
+      "Feedback 1:1 del mentor en 2 momentos del proyecto",
+    ])}
+    ${PLAN_BLOCK("Incluye", [
+      "20 horas de video on-demand (acceso 12 meses)",
+      "Proyecto guiado con feedback 1:1 (2 sesiones)",
+      "Librería de 50 materiales PBR descargables",
+      "5 HDRI exclusivos para tus proyectos",
+      "Soporte prioritario (respuesta en 24h)",
+      "Certificado de finalización PDF",
+    ])}
+    ${PLAN_PRICE_BOX(d.price, d.region)}
+    ${PLAN_NEXT_STEPS}
+  `);
+}
+
+function coursePlanAdvancedHtml(d) {
+  return SHELL(`
+    ${PLAN_HEADER(d.courseName, d.courseTagline)}
+    <p style="color:#a1a1aa;font-size:16px;line-height:1.6;margin:0 0 24px;">
+      ¡Hola <strong style="color:#ffffff;">${escapeHtmlStr(d.name)}</strong>! Gracias por tu interés en el
+      <strong style="color:#00c8b4;">${escapeHtmlStr(d.courseName)}</strong>. Este es el plan completo de mentoría para producir piezas audiovisuales de alto impacto.
+    </p>
+    ${PLAN_BLOCK("Objetivos del curso", [
+      "Dominar la cinematografía 3D aplicada a arquitectura (tipos de plano, movimientos, ritmo)",
+      "Crear recorridos 360° interactivos para VR/AR y presentaciones web",
+      "Integrar sound design y música para producciones audiovisuales inmersivas",
+      "Producir piezas audiovisuales completas listas para portfolio profesional",
+    ])}
+    ${PLAN_BLOCK("Estructura del programa (28 horas)", [
+      "Módulo 1 — Cinematografía 3D (5h): tipos de plano, eje de cámara, regla de los tercios",
+      "Módulo 2 — Animación de cámara (5h): dolly, crane, pan, tilt, keyframes e interpolación",
+      "Módulo 3 — Recorridos 360° interactivos (5h): Marziplote, hotspots, VR export",
+      "Módulo 4 — Sound design (4h): selección de música, SFX, sincronización, mezcla básica",
+      "Módulo 5 — Renderización animada (5h): samples, denoising, batch render, formatos",
+      "Módulo 6 — Edición y exportación final (4h): Premiere/DaVinci, color, export web/social",
+    ])}
+    ${PLAN_BLOCK("Proyecto guiado", [
+      "Producción completa de una pieza audiovisual de 30-60s sobre un proyecto arquitectónico",
+      "Incluye: animación cinematográfica + recorrido 360° + sound design + entrega final en 4K",
+      "Feedback 1:1 del mentor en 2 sesiones + revisión final",
+      "Entregable adicional: caso de estudio profesional (caso real con cliente)",
+    ])}
+    ${PLAN_BLOCK("Incluye", [
+      "28 horas de video on-demand (acceso 18 meses)",
+      "Proyecto guiado con feedback 1:1 (2 sesiones)",
+      "Templates de animación editables (After Effects + Premiere)",
+      "Sound design kit: 100+ SFX y 20 pistas musicales con licencia",
+      "Soporte prioritario (respuesta en 24h)",
+      "Certificado de finalización PDF",
+    ])}
+    ${PLAN_PRICE_BOX(d.price, d.region)}
+    ${PLAN_NEXT_STEPS}
+  `);
+}
+
+function coursePlanMasterHtml(d) {
+  return SHELL(`
+    ${PLAN_HEADER(d.courseName, d.courseTagline)}
+    <p style="color:#a1a1aa;font-size:16px;line-height:1.6;margin:0 0 24px;">
+      ¡Hola <strong style="color:#ffffff;">${escapeHtmlStr(d.name)}</strong>! Gracias por tu interés en el
+      <strong style="color:#00c8b4;">${escapeHtmlStr(d.courseName)}</strong>. Este es el programa definitivo —
+      encontrarás abajo el plan completo de los tres niveles + contenido exclusivo de branding de estudio.
+    </p>
+    ${PLAN_BLOCK("Objetivos del programa", [
+      "Dominar completamente el flujo profesional: modelado → renderizado → animación → producción",
+      "Aprender a captar clientes y vender visualización arquitectónica de alto valor",
+      "Construir branding de estudio y propuesta comercial profesional",
+      "Desarrollar portfolio completo con 4 proyectos listos para mostrar a clientes",
+    ])}
+    ${PLAN_BLOCK("Estructura completa (60+ horas)", [
+      "NIVEL 1 — Modelado 3D arquitectónico (12h): interfaces, espacios, mobiliario, exportación",
+      "NIVEL 2 — Rendering fotorrealista (20h): PBR, HDRI, cámaras, post-producción",
+      "NIVEL 3 — Animación cinematográfica (28h): cinematografía, recorridos 360°, sound design",
+      "BONUS — Branding de estudio (6h): identidad visual, propuesta comercial, captación de clientes",
+      "BONUS — Workflow profesional (4h): brief, presupuesto, contratos, gestión de proyecto",
+    ])}
+    ${PLAN_BLOCK("4 proyectos guiados completos", [
+      "Proyecto 1 — Espacio residencial (modelado básico) + 3 renders + walkthrough",
+      "Proyecto 2 — Interior fotorrealista (rendering) + 5 renders 4K + animación cámara 10s",
+      "Proyecto 3 — Pieza audiovisual completa (animación) + video 30-60s 4K + recorrido 360°",
+      "Proyecto 4 — Caso de estudio profesional (branding) + propuesta comercial + portfolio",
+      "Feedback 1:1 del mentor en cada proyecto (4 sesiones de 1h)",
+    ])}
+    ${PLAN_BLOCK("Incluye", [
+      "60+ horas de video on-demand (acceso de por vida)",
+      "4 proyectos guiados completos con feedback 1:1 (4 sesiones)",
+      "Mentoría 1:1 personalizada (6 sesiones de 1h)",
+      "Librería completa: 200+ materiales PBR + 20 HDRI exclusivos",
+      "Plantillas de propuesta comercial + contratos modelo",
+      "Templates de animación + sound design kit completo",
+      "Acceso de por vida a actualizaciones del programa",
+      "Acceso a la red privada de alumni y oportunidades de colaboración",
+      "Soporte prioritario vitalicio (respuesta en 24h)",
+      "Certificado de finalización PDF + carta de recomendación del mentor",
+    ])}
+    ${PLAN_PRICE_BOX(d.price, d.region)}
+    ${PLAN_NEXT_STEPS}
+  `);
+}
+
+function coursePlanHtmlFor(courseId, data) {
+  switch (courseId) {
+    case "basic": return coursePlanBasicHtml(data);
+    case "intermediate": return coursePlanIntermediateHtml(data);
+    case "advanced": return coursePlanAdvancedHtml(data);
+    case "master": return coursePlanMasterHtml(data);
+    default: return autoResponseEnrollHtml(data.name, data.courseName);
+  }
+}
+
 function notificationHtml(lead) {
   return `
 <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto">
@@ -264,19 +506,35 @@ async function processLead(env, input, request, opts) {
     country,
   };
 
-  const autoResponseHtml =
-    opts.source === "course" && opts.courseName
+  // Pick the auto-response HTML:
+  // - course + courseId → detailed mentorship plan
+  // - course (no courseId) → generic enroll template
+  // - contact → contact template
+  const hasCoursePlan = opts.source === "course" && opts.courseId && opts.courseName;
+
+  const autoResponseHtml = hasCoursePlan
+    ? coursePlanHtmlFor(opts.courseId, {
+        name: lead.name,
+        courseName: opts.courseName,
+        courseTagline: opts.courseTagline || "",
+        price: opts.coursePrice || "",
+        region: opts.courseRegion || "",
+      })
+    : opts.source === "course" && opts.courseName
       ? autoResponseEnrollHtml(lead.name, opts.courseName)
       : autoResponseContactHtml(lead.name);
 
   const trial = isTrialMode(env);
+  const autoResponseSubject = hasCoursePlan
+    ? `Plan de mentoría — ${opts.courseName} · AWA 3D Studio`
+    : opts.source === "course"
+      ? `Inscripción recibida — AWA 3D Studio`
+      : "Recibimos tu solicitud — AWA 3D Studio";
+
   const autoResponsePayload = trial
     ? {
         to: INBOX,
-        subject:
-          opts.source === "course"
-            ? `[REENVIAR A ${lead.email}] Inscripción recibida — AWA 3D Studio`
-            : `[REENVIAR A ${lead.email}] Recibimos tu solicitud — AWA 3D Studio`,
+        subject: `[REENVIAR A ${lead.email}] ${autoResponseSubject}`,
         html: forwardReadyWrapper({
           leadEmail: lead.email,
           leadName: lead.name,
@@ -286,10 +544,7 @@ async function processLead(env, input, request, opts) {
       }
     : {
         to: lead.email,
-        subject:
-          opts.source === "course"
-            ? `Inscripción recibida — AWA 3D Studio`
-            : "Recibimos tu solicitud — AWA 3D Studio",
+        subject: autoResponseSubject,
         html: autoResponseHtml,
         replyTo: INBOX,
       };
@@ -489,6 +744,11 @@ const worker = {
           endpoint: "/api/enroll",
           methods: ["POST"],
           description: "AWA 3D Studio course enrollment endpoint (mirror worker)",
+          features: [
+            "Sends detailed mentorship plan email based on courseId",
+            "Supported courseIds: basic, intermediate, advanced, master",
+            "Falls back to generic enroll template if courseId is missing",
+          ],
         }, 200, origin);
       }
       if (request.method !== "POST") {
@@ -496,10 +756,26 @@ const worker = {
       }
       try {
         const input = await request.json();
-        const courseName = (input.service || "Curso").replace(/^Inscripción curso:\s*/, "");
+        // Extract course metadata from explicit fields or fallback to service-string parsing
+        const courseId = typeof input.courseId === "string" ? input.courseId : undefined;
+        const courseName = typeof input.courseName === "string"
+          ? input.courseName
+          : (input.service || "Curso").replace(/^Inscripción curso:\s*/, "");
+        const courseTagline = typeof input.courseTagline === "string" ? input.courseTagline : undefined;
+        const coursePriceNum = typeof input.coursePrice === "number" && isFinite(input.coursePrice) ? input.coursePrice : undefined;
+        const courseCurrency = typeof input.courseCurrency === "string" ? input.courseCurrency : undefined;
+        const courseRegion = typeof input.courseRegion === "string" ? input.courseRegion : undefined;
+        const coursePrice = coursePriceNum !== undefined
+          ? `${coursePriceNum} ${courseCurrency || "USD"}`
+          : undefined;
+
         const result = await processLead(env, input, request, {
           source: "course",
           courseName,
+          courseId,
+          courseTagline,
+          coursePrice,
+          courseRegion,
         });
         return jsonResponse(result, result.status, origin);
       } catch (err) {

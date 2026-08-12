@@ -15,6 +15,14 @@ export async function OPTIONS() {
   });
 }
 
+function asString(v: unknown): string | undefined {
+  return typeof v === "string" ? v : undefined;
+}
+
+function asNumber(v: unknown): number | undefined {
+  return typeof v === "number" && isFinite(v) ? v : undefined;
+}
+
 export async function POST(req: Request) {
   let body: unknown;
   try {
@@ -31,11 +39,29 @@ export async function POST(req: Request) {
   const service =
     typeof (body as any)?.service === "string" ? (body as any).service : "";
   const courseNameMatch = service.match(/Inscripción curso:\s*(.+)$/i);
-  const courseName = courseNameMatch?.[1]?.trim();
+  const courseNameFromService = courseNameMatch?.[1]?.trim();
+
+  // The new payload includes explicit course metadata fields sent by courses.tsx
+  const courseId = asString((body as any)?.courseId);
+  const courseName = asString((body as any)?.courseName) || courseNameFromService;
+  const courseTagline = asString((body as any)?.courseTagline);
+  const coursePriceNum = asNumber((body as any)?.coursePrice);
+  const courseCurrency = asString((body as any)?.courseCurrency);
+  const courseRegion = asString((body as any)?.courseRegion);
+
+  // Build the human-readable price string (e.g. "$25 USD")
+  const coursePrice =
+    coursePriceNum !== undefined
+      ? `${coursePriceNum} ${courseCurrency || "USD"}`
+      : undefined;
 
   const result = await processLead(body, req, {
     source: "course",
     courseName,
+    courseId,
+    courseTagline,
+    coursePrice,
+    courseRegion,
   });
 
   return NextResponse.json(
@@ -53,5 +79,10 @@ export async function GET() {
     endpoint: "/api/enroll",
     methods: ["POST"],
     description: "AWA 3D Studio course enrollment endpoint",
+    features: [
+      "Sends detailed mentorship plan email based on courseId",
+      "Supported courseIds: basic, intermediate, advanced, master",
+      "Falls back to generic enroll template if courseId is missing",
+    ],
   });
 }
