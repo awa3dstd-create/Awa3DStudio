@@ -494,7 +494,7 @@ export const CONTACT_INFO = {
   // Mirrors disponibles para failover (el SW los prueba en orden)
   mirrors: [
     "https://awa3dstudio.pages.dev",         // Primary — Cloudflare Pages
-    "https://awa3d-mirror.workers.dev",       // Backup 1 — Cloudflare Worker
+    "https://awa3d-mirror.dashiellyeneri.workers.dev",       // Backup 1 — Cloudflare Worker
     // Backup 2: mismo dominio actual (GitHub Pages o donde se sirva)
   ],
 };

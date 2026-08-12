@@ -13,7 +13,7 @@ Este repositorio es **mirror #3** del sitio AWA 3D Studio. Los 3 despliegues fun
 | # | URL | Plataforma | Stack | Función |
 |---|---|---|---|---|
 | 1 | https://awa3dstudio.pages.dev | Cloudflare Pages | Next.js + Edge Functions | **Principal** — frontend + APIs |
-| 2 | https://awa3d-mirror.workers.dev | Cloudflare Worker | Worker (JS) | **Backup 1** — frontend + APIs |
+| 2 | https://awa3d-mirror.dashiellyeneri.workers.dev | Cloudflare Worker | Worker (JS) | **Backup 1** — frontend + APIs |
 | 3 | https://awa3dstd.github.io/Awa3DStudio | GitHub Pages | Next.js static export | **Backup 2** — frontend, APIs vía Worker |
 
 ### 🔄 Failover automático
@@ -22,7 +22,7 @@ El sitio incluye un **Service Worker** (`public/sw.js`) que intercepta las petic
 
 1. Mismo dominio (donde se sirve el frontend)
 2. `https://awa3dstudio.pages.dev` (Cloudflare Pages)
-3. `https://awa3d-mirror.workers.dev` (Worker)
+3. `https://awa3d-mirror.dashiellyeneri.workers.dev` (Worker)
 
 El primero que responde exitosamente sirve la respuesta. Si todos fallan, se muestra `/offline.html` con opciones de contacto directo (email + WhatsApp).
 

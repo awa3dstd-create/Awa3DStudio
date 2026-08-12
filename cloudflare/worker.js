@@ -12,7 +12,7 @@
  *
  * CORS abierto a los 3 mirrors:
  *   - https://awa3dstudio.pages.dev
- *   - https://awa3d-mirror.workers.dev
+ *   - https://awa3d-mirror.dashiellyeneri.workers.dev
  *   - https://awa3dstd.github.io
  *
  * Deploy:
@@ -26,7 +26,7 @@
 // ============= CONFIG =============
 const ALLOWED_ORIGINS = new Set([
   "https://awa3dstudio.pages.dev",
-  "https://awa3d-mirror.workers.dev",
+  "https://awa3d-mirror.dashiellyeneri.workers.dev",
   "https://awa3dstd.github.io",
   "https://awa3dstd-create.github.io", // alternate form
 ]);
@@ -540,7 +540,7 @@ const worker = {
   async scheduled(event, env, ctx) {
     // Call itself to trigger follow-up logic
     try {
-      const baseUrl = `https://awa3d-mirror.workers.dev`;
+      const baseUrl = `https://awa3d-mirror.dashiellyeneri.workers.dev`;
       await fetch(`${baseUrl}/api/cron/followup`, {
         method: "GET",
         headers: { Authorization: `Bearer ${env.CRON_SECRET}` },

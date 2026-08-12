@@ -19,7 +19,7 @@ const CACHE_NAME = `awa3d-${SW_VERSION}`;
 const API_MIRRORS = [
   "", // mismo dominio (donde se sirve el frontend, ej: GitHub Pages o Pages mismo)
   "https://awa3dstudio.pages.dev",
-  "https://awa3d-mirror.workers.dev",
+  "https://awa3d-mirror.dashiellyeneri.workers.dev",
 ];
 
 // Timeout para considerar un backend como "caído"

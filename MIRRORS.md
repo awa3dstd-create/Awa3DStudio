@@ -55,7 +55,7 @@ Este documento describe la configuración de los 3 mirrors del sitio AWA 3D Stud
 
 | Atributo | Valor |
 |---|---|
-| URL | https://awa3d-mirror.workers.dev |
+| URL | https://awa3d-mirror.dashiellyeneri.workers.dev |
 | Plataforma | Cloudflare Workers |
 | Source | `cloudflare/worker.js` en este repo |
 | Deploy | `wrangler deploy` (manual o CI) |
@@ -89,7 +89,7 @@ async function handleApiRequest(req) {
   const API_MIRRORS = [
     "",                                // 1. mismo dominio
     "https://awa3dstudio.pages.dev",   // 2. CF Pages
-    "https://awa3d-mirror.workers.dev" // 3. CF Worker
+    "https://awa3d-mirror.dashiellyeneri.workers.dev" // 3. CF Worker
   ];
   
   for (const mirror of API_MIRRORS) {
@@ -214,7 +214,7 @@ No requiere secrets (no tiene APIs). El PAT de GitHub (`ghp_...`) se usa solo un
 | Mirror | Cómo verificar | URL de status |
 |---|---|---|
 | Cloudflare Pages | `curl -I https://awa3dstudio.pages.dev` | https://www.cloudflarestatus.com/ |
-| Cloudflare Worker | `curl -I https://awa3d-mirror.workers.dev` | https://www.cloudflarestatus.com/ |
+| Cloudflare Worker | `curl -I https://awa3d-mirror.dashiellyeneri.workers.dev` | https://www.cloudflarestatus.com/ |
 | GitHub Pages | `curl -I https://awa3dstd.github.io/Awa3DStudio/` | https://www.githubstatus.com/ |
 
 ## 🛟 Recuperación ante desastre
