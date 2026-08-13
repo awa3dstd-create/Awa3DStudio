@@ -74,7 +74,57 @@ function validateLead(input) {
   };
 }
 
-// ============= EMAIL (Resend) =============
+// ============= EMAIL (Brevo + Resend fallback) =============
+//
+// Strategy:
+//   1. If BREVO_API_KEY is set → try Brevo first (can send to ANY recipient)
+//   2. Otherwise → use Resend (which in trial mode can ONLY send to
+//      awa3dstd@gmail.com)
+//
+// Brevo free tier allows sending 300 emails/day FROM a verified sender
+// email (BREVO_SENDER_EMAIL) TO any recipient — perfect for delivering
+// the mentorship plan directly to the client's inbox without needing
+// a custom domain.
+
+async function sendEmailViaBrevo(env, { to, subject, html, replyTo, attachments }) {
+  if (!env.BREVO_API_KEY) {
+    return { ok: false, skipped: true, error: "Missing BREVO_API_KEY", provider: "none" };
+  }
+  try {
+    const recipients = Array.isArray(to) ? to : [to];
+    const body = {
+      sender: {
+        name: env.BREVO_SENDER_NAME || "AWA 3D Studio",
+        email: env.BREVO_SENDER_EMAIL || "awa3dstd@gmail.com",
+      },
+      to: recipients.map((email) => ({ email })),
+      subject,
+      htmlContent: html,
+    };
+    if (replyTo) body.replyTo = { email: replyTo };
+    if (attachments && attachments.length) {
+      body.attachment = attachments.map((a) => ({ name: a.filename, content: a.content }));
+    }
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": env.BREVO_API_KEY,
+        "Content-Type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      return { ok: false, error: `Brevo ${res.status}: ${err}`, provider: "brevo" };
+    }
+    const data = await res.json().catch(() => ({}));
+    return { ok: true, id: data.messageId || data.id || `brevo-${Date.now()}`, provider: "brevo" };
+  } catch (err) {
+    return { ok: false, error: String(err), provider: "brevo" };
+  }
+}
+
 async function sendEmail(env, { to, subject, html, replyTo, attachments }) {
   if (!env.RESEND_API_KEY) {
     return { ok: false, skipped: true, error: "RESEND_API_KEY not configured" };
@@ -112,6 +162,27 @@ async function sendEmail(env, { to, subject, html, replyTo, attachments }) {
 function isTrialMode(env) {
   const from = env.RESEND_FROM_EMAIL || "";
   return from.includes("onboarding@resend.dev");
+}
+
+// Returns true if we can deliver emails directly to ANY recipient
+// (not just the studio inbox). Possible when:
+//   - Brevo is configured (BREVO_API_KEY set), OR
+//   - Resend is NOT in trial mode (custom domain verified)
+function canSendDirectly(env) {
+  return !!env.BREVO_API_KEY || !isTrialMode(env);
+}
+
+// Smart send: tries Brevo first (if configured), falls back to Resend.
+// Use this for the auto-response to clients — can deliver to ANY email
+// when Brevo is available. Falls back to Resend trial mode (which only
+// delivers to awa3dstd@gmail.com) when Brevo is not configured.
+async function sendEmailSmart(env, params) {
+  if (env.BREVO_API_KEY) {
+    const result = await sendEmailViaBrevo(env, params);
+    if (result.ok) return result;
+    console.warn("[email] Brevo failed, falling back to Resend:", result.error);
+  }
+  return sendEmail(env, params);
 }
 
 // ============= NOTION =============
@@ -524,15 +595,29 @@ async function processLead(env, input, request, opts) {
       ? autoResponseEnrollHtml(lead.name, opts.courseName)
       : autoResponseContactHtml(lead.name);
 
-  const trial = isTrialMode(env);
+  // Decide whether we can deliver directly to the lead's email.
+  // - Brevo configured → can send to ANY email
+  // - Resend not in trial mode → can send to ANY email
+  // - Otherwise → must wrap and send to studio inbox for manual forwarding
+  const canDirect = canSendDirectly(env);
+  const trial = !canDirect; // legacy alias
+
   const autoResponseSubject = hasCoursePlan
     ? `Plan de mentoría — ${opts.courseName} · AWA 3D Studio`
     : opts.source === "course"
       ? `Inscripción recibida — AWA 3D Studio`
       : "Recibimos tu solicitud — AWA 3D Studio";
 
-  const autoResponsePayload = trial
+  const autoResponsePayload = canDirect
     ? {
+        // Direct delivery to the lead's inbox (Brevo or non-trial Resend)
+        to: lead.email,
+        subject: autoResponseSubject,
+        html: autoResponseHtml,
+        replyTo: INBOX,
+      }
+    : {
+        // Trial mode only — send to studio inbox wrapped in forward banner
         to: INBOX,
         subject: `[REENVIAR A ${lead.email}] ${autoResponseSubject}`,
         html: forwardReadyWrapper({
@@ -541,16 +626,15 @@ async function processLead(env, input, request, opts) {
           innerHtml: autoResponseHtml,
         }),
         replyTo: INBOX,
-      }
-    : {
-        to: lead.email,
-        subject: autoResponseSubject,
-        html: autoResponseHtml,
-        replyTo: INBOX,
       };
 
+  // Fire all 4 in parallel — Promise.allSettled so one failure doesn't break the rest
+  // - Auto-response uses sendEmailSmart (tries Brevo first, falls back to Resend)
+  //   so it can deliver to ANY recipient when Brevo is configured.
+  // - Internal notification uses sendEmail (Resend) since it always goes to
+  //   the studio inbox, which Resend trial mode can deliver to.
   const [autoRes, internalRes, notionRes, telegramRes] = await Promise.allSettled([
-    sendEmail(env, autoResponsePayload),
+    sendEmailSmart(env, autoResponsePayload),
     sendEmail(env, {
       to: INBOX,
       subject:
@@ -580,6 +664,9 @@ async function processLead(env, input, request, opts) {
     // as a fallback when email delivery fails (Gmail filters onboarding@resend.dev).
     planHtml: autoResponseHtml,
     planSubject: autoResponseSubject,
+    // True when the auto-response email actually reached the lead's inbox
+    // (via Brevo or non-trial Resend).
+    directDelivery: canDirect && results.autoResponse.ok,
     trialMode: trial,
     leadEmail: lead.email,
   };

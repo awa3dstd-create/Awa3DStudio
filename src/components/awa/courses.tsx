@@ -512,7 +512,12 @@ function EnrollmentDialog({
         let success = false;
         let lastErr: any = null;
         let validationError: string | null = null;
-        let planData: { planHtml?: string; planSubject?: string; trialMode?: boolean } = {};
+        let planData: {
+          planHtml?: string;
+          planSubject?: string;
+          trialMode?: boolean;
+          directDelivery?: boolean;
+        } = {};
         for (const url of endpoints) {
           try {
             const controller = new AbortController();
@@ -534,6 +539,7 @@ function EnrollmentDialog({
                     planHtml: data.planHtml,
                     planSubject: data.planSubject,
                     trialMode: data.trialMode,
+                    directDelivery: data.directDelivery,
                   };
                 }
               } catch {
@@ -553,14 +559,18 @@ function EnrollmentDialog({
           }
         }
         if (success) {
-          if (planData.trialMode) {
-            // Modo trial: el email va al inbox del estudio, no al lead.
+          // Toast según si el email llegó directo al cliente o no
+          if (planData.directDelivery) {
+            // Email enviado directamente al cliente (vía Brevo o Resend producción)
+            toast.success(
+              "¡Inscripción enviada! Te enviamos el plan del curso por email. También lo mostramos a continuación."
+            );
+          } else {
+            // Modo trial: el email va al inbox del estudio para reenvío manual.
             // Mostrar el plan aquí mismo como fallback.
             toast.success(
               "¡Inscripción recibida! Te mostramos el plan de mentoría a continuación."
             );
-          } else {
-            toast.success("¡Inscripción enviada! Te enviamos el plan del curso por email.");
           }
           // Guardar el plan para mostrarlo en el diálogo de resultado
           if (planData.planHtml) {

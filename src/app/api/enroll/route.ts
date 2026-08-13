@@ -72,6 +72,7 @@ export async function POST(req: Request) {
       // when email delivery fails (Gmail filters onboarding@resend.dev).
       planHtml: result.planHtml,
       planSubject: result.planSubject,
+      directDelivery: result.directDelivery,
       trialMode: result.trialMode,
       leadEmail: result.leadEmail,
     },

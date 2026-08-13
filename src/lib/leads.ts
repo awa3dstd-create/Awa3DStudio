@@ -9,7 +9,7 @@
  * trigger the detailed mentorship plan email instead of the generic one.
  */
 
-import { sendEmail, isTrialMode } from "@/lib/email";
+import { sendEmail, sendEmailSmart, canSendDirectly } from "@/lib/email";
 import { createLeadInNotion } from "@/lib/notion";
 import { sendTelegramMessage } from "@/lib/telegram";
 import {
@@ -53,6 +53,11 @@ export interface ProcessResult {
   // (e.g. Gmail filtering `onboarding@resend.dev` in trial mode).
   planHtml?: string;
   planSubject?: string;
+  // True when the auto-response email was delivered directly to the lead's
+  // inbox (Brevo configured OR Resend not in trial mode). False when only
+  // Resend trial is available — email goes to studio inbox with
+  // [REENVIAR A X] wrapper for manual forwarding.
+  directDelivery?: boolean;
   trialMode?: boolean;
   leadEmail?: string;
 }
@@ -148,10 +153,12 @@ export async function processLead(
       ? autoResponseEnrollHtml(lead.name, opts.courseName)
       : autoResponseContactHtml(lead.name);
 
-  // In trial mode, route the auto-response to the inbox wrapped in a
-  // forward-ready banner instead of trying to send to the lead directly
-  // (which would fail with 403 because of Resend's trial restriction).
-  const trial = isTrialMode();
+  // Decide whether we can deliver directly to the lead's email.
+  // - Brevo configured → can send to ANY email
+  // - Resend not in trial mode → can send to ANY email
+  // - Otherwise → must wrap and send to studio inbox for manual forwarding
+  const canDirect = canSendDirectly();
+  const trial = !canDirect; // legacy alias for backward compat
 
   const autoResponseSubject = hasCoursePlan
     ? `Plan de mentoría — ${opts.courseName} · AWA 3D Studio`
@@ -159,8 +166,16 @@ export async function processLead(
       ? `Inscripción recibida — AWA 3D Studio`
       : "Recibimos tu solicitud — AWA 3D Studio";
 
-  const autoResponsePayload = trial
+  const autoResponsePayload = canDirect
     ? {
+        // Direct delivery to the lead's inbox (Brevo or non-trial Resend)
+        to: lead.email,
+        subject: autoResponseSubject,
+        html: autoResponseHtml,
+        replyTo: INBOX,
+      }
+    : {
+        // Trial mode only — send to studio inbox wrapped in forward banner
         to: INBOX,
         subject: `[REENVIAR A ${lead.email}] ${autoResponseSubject}`,
         html: forwardReadyWrapper({
@@ -169,17 +184,15 @@ export async function processLead(
           innerHtml: autoResponseHtml,
         }),
         replyTo: INBOX,
-      }
-    : {
-        to: lead.email,
-        subject: autoResponseSubject,
-        html: autoResponseHtml,
-        replyTo: INBOX,
       };
 
   // Fire all 4 in parallel — Promise.allSettled so one failure doesn't break the rest
+  // - Auto-response uses sendEmailSmart (tries Brevo first, falls back to Resend)
+  //   so it can deliver to ANY recipient when Brevo is configured.
+  // - Internal notification uses sendEmail (Resend) since it always goes to
+  //   the studio inbox, which Resend trial mode can deliver to.
   const [autoRes, internalRes, notionRes, telegramRes] = await Promise.allSettled([
-    sendEmail(autoResponsePayload),
+    sendEmailSmart(autoResponsePayload),
     sendEmail({
       to: INBOX,
       subject:
@@ -212,6 +225,9 @@ export async function processLead(
 
   // The HTTP response is ok:true as long as the request was valid.
   // Individual failures are surfaced in `results` for transparency.
+  // directDelivery: true when the auto-response email actually reached the
+  // lead's inbox (via Brevo or non-trial Resend).
+  const directDelivery = canDirect && results.autoResponse.ok;
   return {
     ok: true,
     status: 200,
@@ -222,6 +238,7 @@ export async function processLead(
     // filters to spam or blocks entirely.
     planHtml: autoResponseHtml,
     planSubject: autoResponseSubject,
+    directDelivery,
     trialMode: trial,
     leadEmail: lead.email,
   };
