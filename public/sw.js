@@ -12,7 +12,7 @@
  * Si todos los backends fallan, sirve versión cacheada (offline mode).
  */
 
-const SW_VERSION = "v1.0.0-20260812";
+const SW_VERSION = "v1.1.0-20260815";
 const CACHE_NAME = `awa3d-${SW_VERSION}`;
 
 // Backends para /api/* failover (en orden de prioridad)
