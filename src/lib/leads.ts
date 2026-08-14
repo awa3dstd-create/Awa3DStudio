@@ -12,12 +12,14 @@
 import { sendEmail, sendEmailSmart, canSendDirectly } from "@/lib/email";
 import { createLeadInNotion } from "@/lib/notion";
 import { sendTelegramMessage } from "@/lib/telegram";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import {
   autoResponseContactHtml,
   autoResponseEnrollHtml,
   coursePlanHtmlFor,
   notificationHtml,
   telegramMessage,
+  whatsappMessage,
   forwardReadyWrapper,
   type LeadRecord,
 } from "@/lib/templates";
@@ -52,6 +54,7 @@ export interface ProcessResult {
     internal: Awaited<ReturnType<typeof sendEmail>>;
     notion: Awaited<ReturnType<typeof createLeadInNotion>>;
     telegram: Awaited<ReturnType<typeof sendTelegramMessage>>;
+    whatsapp: Awaited<ReturnType<typeof sendWhatsAppMessage>>;
   };
   // The plan HTML that was emailed to the lead. Returned to the API caller
   // so the front-end can display it as a fallback when email delivery fails
@@ -125,6 +128,7 @@ export async function processLead(
         internal: { ok: false, skipped: true, error: validation.error },
         notion: { ok: false, skipped: true, error: validation.error },
         telegram: { ok: false, skipped: true, error: validation.error },
+        whatsapp: { ok: false, skipped: true, error: validation.error },
       },
     };
   }
@@ -206,12 +210,14 @@ export async function processLead(
         replyTo: INBOX,
       };
 
-  // Fire all 4 in parallel — Promise.allSettled so one failure doesn't break the rest
+  // Fire all 5 in parallel — Promise.allSettled so one failure doesn't break the rest
   // - Auto-response uses sendEmailSmart (tries Brevo first, falls back to Resend)
   //   so it can deliver to ANY recipient when Brevo is configured.
   // - Internal notification uses sendEmail (Resend) since it always goes to
   //   the studio inbox, which Resend trial mode can deliver to.
-  const [autoRes, internalRes, notionRes, telegramRes] = await Promise.allSettled([
+  // - WhatsApp uses CallMeBot (real-time mobile push) — works alongside Telegram
+  //   to ensure the studio is alerted even when Telegram is muted/uninstalled.
+  const [autoRes, internalRes, notionRes, telegramRes, whatsappRes] = await Promise.allSettled([
     sendEmailSmart(autoResponsePayload),
     sendEmail({
       to: INBOX,
@@ -223,6 +229,7 @@ export async function processLead(
     }),
     createLeadInNotion({ ...lead }),
     sendTelegramMessage(telegramMessage(lead)),
+    sendWhatsAppMessage(whatsappMessage(lead)),
   ]);
 
   const pick = <T>(p: PromiseSettledResult<T>, fallback: T): T =>
@@ -233,10 +240,11 @@ export async function processLead(
     internal: pick(internalRes, { ok: false, error: "Promise rejected" }),
     notion: pick(notionRes, { ok: false, error: "Promise rejected" }),
     telegram: pick(telegramRes, { ok: false, error: "Promise rejected" }),
+    whatsapp: pick(whatsappRes, { ok: false, error: "Promise rejected" }),
   };
 
   // Log failures for debugging (don't fail the request)
-  (["autoResponse", "internal", "notion", "telegram"] as const).forEach((k) => {
+  (["autoResponse", "internal", "notion", "telegram", "whatsapp"] as const).forEach((k) => {
     const r = results[k];
     if (!r.ok && !r.skipped) {
       console.error(`[processLead] ${k} failed:`, r.error);

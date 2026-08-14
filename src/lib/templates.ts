@@ -386,17 +386,41 @@ export function notificationHtml(lead: LeadRecord): string {
 }
 
 // ---------- Telegram: compact notification ----------
+
 export function telegramMessage(lead: LeadRecord): string {
-  const emoji = lead.source === "course" ? "🎓" : "🟢";
-  const label = lead.source === "course" ? "Nueva inscripción" : "Nuevo lead";
+  const isCourse = lead.source === "course";
+  const emoji = isCourse ? "🎓" : "🟢";
+  const label = isCourse ? "NUEVA INSCRIPCIÓN" : "NUEVO LEAD";
+  const ts = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
   return (
-    `${emoji} <b>${label}</b>\n\n` +
+    `${emoji} <b>━━━ ${label} ━━━</b>\n` +
+    `<i>AWA 3D Studio</i> · ${escapeHtml(ts)}\n\n` +
     `<b>Nombre:</b> ${escapeHtml(lead.name)}\n` +
     `<b>Email:</b> ${escapeHtml(lead.email)}\n` +
     `<b>Teléfono:</b> ${escapeHtml(lead.phone || "—")}\n` +
     `<b>Servicio:</b> ${escapeHtml(lead.service || "—")}\n` +
-    `<b>País:</b> ${escapeHtml(lead.country || "—")}\n\n` +
-    `<b>Mensaje:</b>\n${escapeHtml(lead.message.slice(0, 500))}`
+    `<b>País:</b> ${escapeHtml(lead.country || "—")}\n` +
+    `<b>IP:</b> ${escapeHtml(lead.ip || "—")}\n\n` +
+    `<b>Mensaje:</b>\n${escapeHtml(lead.message.slice(0, 800))}`
+  );
+}
+
+// ---------- WhatsApp: plain-text version of the same notification ----------
+// CallMeBot doesn't render HTML — send a compact plain-text version.
+
+export function whatsappMessage(lead: LeadRecord): string {
+  const isCourse = lead.source === "course";
+  const label = isCourse ? "NUEVA INSCRIPCION" : "NUEVO LEAD";
+  const ts = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
+  return (
+    `*=== ${label} ===*\n` +
+    `AWA 3D Studio · ${ts}\n\n` +
+    `Nombre: ${lead.name}\n` +
+    `Email: ${lead.email}\n` +
+    `Telefono: ${lead.phone || "—"}\n` +
+    `Servicio: ${lead.service || "—"}\n` +
+    `Pais: ${lead.country || "—"}\n\n` +
+    `Mensaje:\n${lead.message.slice(0, 500)}`
   );
 }
 

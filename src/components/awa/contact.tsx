@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Mail, Phone, MapPin, Send, ArrowUpRight } from "lucide-react";
+import { Mail, Phone, MapPin, Send, ArrowUpRight, GraduationCap } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -252,6 +252,27 @@ export function Contact() {
                 />
               </Field>
             </motion.div>
+
+            {form.service === "Curso de formación" && (
+              <motion.div
+                variants={fadeUp}
+                className="flex items-start gap-3 p-4 border border-[#00c8b4]/30 bg-[#00c8b4]/5 rounded-sm"
+              >
+                <GraduationCap size={18} className="text-[#00c8b4] flex-shrink-0 mt-0.5" />
+                <div className="text-xs leading-relaxed text-[#a1a1aa]">
+                  <p className="text-white font-semibold mb-1">¿Quieres inscribirte ya?</p>
+                  Puedes usar el formulario de inscripción directa en la sección{" "}
+                  <a
+                    href="#cursos"
+                    className="text-[#00c8b4] underline underline-offset-2 hover:text-[#00e5d0]"
+                  >
+                    Cursos
+                  </a>{" "}
+                  (más arriba) — recibirás al instante el plan de estudio completo por correo.
+                  También puedes dejar tu mensaje aquí y te orientaremos.
+                </div>
+              </motion.div>
+            )}
 
             <motion.div variants={fadeUp}>
               <Button
