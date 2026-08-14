@@ -255,7 +255,9 @@ export function Contact() {
 
             {form.service === "Curso de formación" && (
               <motion.div
-                variants={fadeUp}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25 }}
                 className="flex items-start gap-3 p-4 border border-[#00c8b4]/30 bg-[#00c8b4]/5 rounded-sm"
               >
                 <GraduationCap size={18} className="text-[#00c8b4] flex-shrink-0 mt-0.5" />
