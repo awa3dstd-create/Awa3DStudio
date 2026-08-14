@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Phone, MapPin, Send, ArrowUpRight, GraduationCap } from "lucide-react";
+import { Mail, Phone, MapPin, Send, ArrowUpRight, GraduationCap, Check, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -534,27 +534,39 @@ export function Contact() {
                   transition={{ duration: 0.3, ease: "easeInOut" }}
                   className="overflow-hidden"
                 >
-                  <div className="p-4 md:p-5 border border-[#1e1e2a] bg-[#0a0a0f] rounded-sm space-y-5">
-                    <div className="flex items-center gap-2 pb-3 border-b border-[#1e1e2a]">
-                      <span className="text-[10px] uppercase tracking-[0.18em] text-[#00c8b4] font-heading font-semibold">
-                        Detalles para cotización
-                      </span>
-                      <span className="text-[10px] text-[#71717a]">
-                        (ayúdanos a darte un precio más preciso)
+                  <div className="rounded-md border border-[#1e1e2a] bg-gradient-to-b from-[#0a0a0f] to-[#0f0f17] overflow-hidden">
+                    {/* Header bar */}
+                    <div className="flex items-center gap-3 px-5 py-3.5 bg-[#0a0a0f] border-b border-[#1e1e2a]">
+                      <div className="w-1 h-5 bg-[#00c8b4] rounded-full flex-shrink-0" />
+                      <SlidersHorizontal size={14} className="text-[#00c8b4] flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs uppercase tracking-[0.18em] text-white font-heading font-semibold truncate">
+                          Configura tu cotización
+                        </p>
+                        <p className="text-[10px] text-[#71717a] mt-0.5 truncate">
+                          Selecciona las opciones que mejor describan tu proyecto
+                        </p>
+                      </div>
+                      <span className="text-[10px] text-[#52525b] font-mono whitespace-nowrap hidden sm:inline">
+                        {activeSubOptionGroups.length} {activeSubOptionGroups.length === 1 ? "categoría" : "categorías"}
                       </span>
                     </div>
-                    {activeSubOptionGroups.map((group) => (
-                      <SubOptionGroupRenderer
-                        key={group.id}
-                        group={group}
-                        selectedValues={subOptions[group.id] || []}
-                        onToggle={(val) =>
-                          group.type === "checkbox"
-                            ? toggleCheckbox(group.id, val)
-                            : setRadio(group.id, val)
-                        }
-                      />
-                    ))}
+                    {/* Groups */}
+                    <div className="p-5 space-y-5">
+                      {activeSubOptionGroups.map((group, idx) => (
+                        <SubOptionGroupRenderer
+                          key={group.id}
+                          group={group}
+                          index={idx + 1}
+                          selectedValues={subOptions[group.id] || []}
+                          onToggle={(val) =>
+                            group.type === "checkbox"
+                              ? toggleCheckbox(group.id, val)
+                              : setRadio(group.id, val)
+                          }
+                        />
+                      ))}
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -638,24 +650,36 @@ export function Contact() {
 
 function SubOptionGroupRenderer({
   group,
+  index,
   selectedValues,
   onToggle,
 }: {
   group: SubOptionGroup;
+  index: number;
   selectedValues: string[];
   onToggle: (value: string) => void;
 }) {
+  const selectedCount = selectedValues.length;
   return (
-    <div>
-      <p className="text-[11px] uppercase tracking-[0.15em] text-[#71717a] font-heading font-semibold mb-3">
-        {group.label}
-        {group.type === "checkbox" && (
-          <span className="ml-2 normal-case tracking-normal text-[10px] text-[#52525b]">
-            (puedes elegir varios)
-          </span>
-        )}
-      </p>
-      <div className="flex flex-wrap gap-2">
+    <div className={index > 1 ? "pt-5 border-t border-[#1e1e2a]/60" : ""}>
+      <div className="flex items-baseline gap-2 mb-3 flex-wrap">
+        <span className="text-[10px] font-mono text-[#00c8b4]/70 tabular-nums">
+          {String(index).padStart(2, "0")}
+        </span>
+        <p className="text-[11px] uppercase tracking-[0.15em] text-[#a1a1aa] font-heading font-semibold">
+          {group.label}
+        </p>
+        <span className="text-[10px] text-[#52525b] normal-case tracking-normal">
+          {group.type === "checkbox"
+            ? selectedCount > 0
+              ? `· ${selectedCount} seleccionada${selectedCount === 1 ? "" : "s"}`
+              : "· elige varias"
+            : selectedCount > 0
+              ? "· elegida"
+              : "· elige una"}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {group.options.map((opt) => {
           const isSelected = selectedValues.includes(opt.value);
           return (
@@ -664,14 +688,41 @@ function SubOptionGroupRenderer({
               type="button"
               onClick={() => onToggle(opt.value)}
               className={
-                "px-3 py-1.5 text-xs rounded-sm border transition-all " +
+                "group relative flex items-center gap-2.5 px-3 py-2.5 rounded-md border text-left transition-all duration-150 " +
                 (isSelected
-                  ? "border-[#00c8b4] bg-[#00c8b4]/15 text-[#00c8b4] font-medium"
-                  : "border-[#1e1e2a] bg-[#0f0f17] text-[#a1a1aa] hover:border-[#00c8b4]/40 hover:text-white")
+                  ? "border-[#00c8b4] bg-[#00c8b4]/10 shadow-[0_0_0_1px_rgba(0,200,180,0.25),inset_0_0_24px_-12px_rgba(0,200,180,0.6)]"
+                  : "border-[#1e1e2a] bg-[#0a0a0f] hover:border-[#3a3a4a] hover:bg-[#101019] hover:-translate-y-px")
               }
               aria-pressed={isSelected}
             >
-              {opt.label}
+              {/* Indicator */}
+              <span
+                className={
+                  "flex-shrink-0 w-4 h-4 flex items-center justify-center transition-all " +
+                  (group.type === "checkbox" ? "rounded-[3px]" : "rounded-full") +
+                  (isSelected
+                    ? " bg-[#00c8b4] border-[#00c8b4]"
+                    : " border-[#3f3f4a] bg-transparent group-hover:border-[#52525b]")
+                }
+                style={{ borderWidth: "1.5px", borderStyle: "solid" }}
+              >
+                {isSelected &&
+                  (group.type === "checkbox" ? (
+                    <Check size={10} strokeWidth={3} className="text-[#0a0a0f]" />
+                  ) : (
+                    <span className="block w-1.5 h-1.5 rounded-full bg-[#0a0a0f]" />
+                  ))}
+              </span>
+              <span
+                className={
+                  "text-xs leading-tight " +
+                  (isSelected
+                    ? "text-white font-medium"
+                    : "text-[#a1a1aa] group-hover:text-white")
+                }
+              >
+                {opt.label}
+              </span>
             </button>
           );
         })}
