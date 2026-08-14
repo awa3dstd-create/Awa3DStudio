@@ -85,6 +85,8 @@ export interface CoursePlanData {
   courseTagline: string;
   price: string; // pre-formatted: "$25 USD", "€139 EUR", etc.
   region: string;
+  /** Software incluido en el curso (para mostrar en el plan). */
+  software?: Array<{ name: string; vendor: string }>;
 }
 
 const PLAN_HEADER = (courseName: string, tagline: string) => `
@@ -128,6 +130,28 @@ const PLAN_NEXT_STEPS = `
   </p>
 `;
 
+/**
+ * Software incluido en el curso. Recibe los `SoftwareInfo` del CourseTier y
+ * renderiza una caja visual con los nombres + vendor de cada software.
+ * No se incluyen logos como imágenes para no romper el render del email en
+ * clientes de correo (Gmail, Outlook) que suelen bloquear imágenes externas.
+ */
+const PLAN_SOFTWARE = (
+  software: Array<{ name: string; vendor: string }>
+): string => {
+  if (!software.length) return "";
+  const items = software
+    .map(
+      (s) => `<span style="display:inline-block;background:#1a1a2e;border:1px solid #27272a;border-radius:6px;padding:6px 12px;margin:0 6px 8px 0;color:#ffffff;font-size:13px;font-weight:600;">${escapeHtml(s.name)} <span style="color:#71717a;font-weight:400;font-size:11px;margin-left:6px;">${escapeHtml(s.vendor)}</span></span>`
+    )
+    .join("");
+  return `
+  <h2 style="color:#00c8b4;font-size:14px;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;margin:24px 0 12px;border-bottom:1px solid #1e1e2a;padding-bottom:8px;">Software incluido</h2>
+  <div style="margin:0 0 8px;">${items}</div>
+  <p style="color:#71717a;font-size:12px;line-height:1.6;margin:8px 0 0;">La mayoría ofrece trials gratuitos de 30 días. Te recomendamos instalarlos antes del primer módulo.</p>
+  `;
+};
+
 export function coursePlanBasicHtml(d: CoursePlanData): string {
   return SHELL(`
     ${PLAN_HEADER(d.courseName, d.courseTagline)}
@@ -160,6 +184,7 @@ export function coursePlanBasicHtml(d: CoursePlanData): string {
       "Certificado de finalización PDF",
       "Soporte por email (respuesta en 48h)",
     ])}
+    ${d.software ? PLAN_SOFTWARE(d.software) : ""}
     ${PLAN_PRICE_BOX(d.price, d.region)}
     ${PLAN_NEXT_STEPS}
   `);
@@ -199,6 +224,7 @@ export function coursePlanIntermediateHtml(d: CoursePlanData): string {
       "Soporte prioritario (respuesta en 24h)",
       "Certificado de finalización PDF",
     ])}
+    ${d.software ? PLAN_SOFTWARE(d.software) : ""}
     ${PLAN_PRICE_BOX(d.price, d.region)}
     ${PLAN_NEXT_STEPS}
   `);
@@ -239,6 +265,7 @@ export function coursePlanAdvancedHtml(d: CoursePlanData): string {
       "Soporte prioritario (respuesta en 24h)",
       "Certificado de finalización PDF",
     ])}
+    ${d.software ? PLAN_SOFTWARE(d.software) : ""}
     ${PLAN_PRICE_BOX(d.price, d.region)}
     ${PLAN_NEXT_STEPS}
   `);
@@ -284,6 +311,7 @@ export function coursePlanMasterHtml(d: CoursePlanData): string {
       "Soporte prioritario vitalicio (respuesta en 24h)",
       "Certificado de finalización PDF + carta de recomendación del mentor",
     ])}
+    ${d.software ? PLAN_SOFTWARE(d.software) : ""}
     ${PLAN_PRICE_BOX(d.price, d.region)}
     ${PLAN_NEXT_STEPS}
   `);

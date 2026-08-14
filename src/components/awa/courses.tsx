@@ -26,8 +26,10 @@ import {
   COURSE_TIERS,
   PRICING_BY_REGION,
   COUNTRY_TO_REGION,
+  SOFTWARE_REGISTRY,
   type RegionPricing,
   type CourseTier,
+  type SoftwareKey,
   CONTACT_INFO,
 } from "./data";
 import { fadeUp, stagger, viewportOnce } from "./motion";
@@ -336,7 +338,7 @@ export function Courses() {
           whileInView="visible"
           viewport={viewportOnce}
           variants={stagger}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4"
         >
           {COURSE_TIERS.map((tier) => (
             <CourseCard
@@ -374,31 +376,58 @@ function CourseCard({
   return (
     <motion.article
       variants={fadeUp}
-      className={`relative p-6 md:p-7 rounded-sm border bg-[#0a0a0f] awa-card-hover flex flex-col ${
+      className={`relative p-4 md:p-5 rounded-sm border bg-[#0a0a0f] awa-card-hover flex flex-col ${
         tier.highlighted
           ? "border-[#00c8b4]/40"
           : "border-[#1e1e2a]"
       }`}
     >
       {tier.badge && (
-        <span className="absolute -top-3 left-6 px-3 py-1 text-[10px] font-heading font-semibold uppercase tracking-[0.15em] rounded-full bg-[#00c8b4] text-[#0a0a0f]">
+        <span className="absolute -top-3 left-4 px-2.5 py-1 text-[9px] font-heading font-semibold uppercase tracking-[0.15em] rounded-full bg-[#00c8b4] text-[#0a0a0f]">
           {tier.badge}
         </span>
       )}
 
-      <h3 className="font-heading font-bold text-lg text-white mb-1">
+      <h3 className="font-heading font-bold text-base text-white mb-1">
         {tier.name}
       </h3>
-      <p className="text-xs text-[#71717a] mb-5 min-h-[2.5rem]">
+      <p className="text-[11px] text-[#71717a] mb-3 min-h-[2rem] leading-snug">
         {tier.tagline}
       </p>
 
-      <div className="mb-5">
+      {/* Software logos — official brand marks only (no text labels) */}
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[8px] uppercase tracking-[0.22em] text-[#71717a] font-heading font-semibold">
+            Software
+          </span>
+          <div className="h-px flex-1 bg-gradient-to-r from-[#27272e] via-[#27272e]/60 to-transparent" />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {tier.software.map((key: SoftwareKey) => {
+            const sw = SOFTWARE_REGISTRY[key];
+            if (!sw) return null;
+            return (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={key}
+                src={sw.logo}
+                alt={`${sw.name} logo`}
+                title={`${sw.name} · ${sw.vendor}`}
+                className="h-5 w-auto object-contain opacity-75 hover:opacity-100 transition-opacity duration-200"
+                loading="lazy"
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mb-4">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-3xl md:text-4xl font-heading font-bold text-white">
+          <span className="text-2xl md:text-3xl font-heading font-bold text-white">
             {formatPrice(price, region.symbol)}
           </span>
-          <span className="text-xs text-[#71717a]">{region.currency}</span>
+          <span className="text-[11px] text-[#71717a]">{region.currency}</span>
         </div>
         {region.regionalBadge && (
           <p className="text-[10px] text-[#00c8b4] mt-1 uppercase tracking-[0.15em] font-heading font-semibold">
@@ -407,18 +436,18 @@ function CourseCard({
         )}
       </div>
 
-      <p className="text-xs text-[#a1a1aa] leading-relaxed mb-5 min-h-[4.5rem]">
+      <p className="text-[11px] text-[#a1a1aa] leading-relaxed mb-4 min-h-[4rem]">
         {tier.description}
       </p>
 
-      <ul className="space-y-2.5 mb-7 flex-1">
+      <ul className="space-y-2 mb-5 flex-1">
         {tier.includes.map((inc) => (
           <li
             key={inc}
-            className="flex items-start gap-2 text-xs text-[#a1a1aa]"
+            className="flex items-start gap-2 text-[11px] text-[#a1a1aa]"
           >
             <Check
-              size={14}
+              size={13}
               className="text-[#00c8b4] flex-shrink-0 mt-0.5"
               strokeWidth={2.5}
             />
@@ -430,7 +459,7 @@ function CourseCard({
       <Button
         type="button"
         onClick={onEnroll}
-        className="w-full bg-[#00c8b4] text-[#0a0a0f] hover:bg-[#00e5d0] font-semibold h-11"
+        className="w-full bg-[#00c8b4] text-[#0a0a0f] hover:bg-[#00e5d0] font-semibold h-10 text-sm"
       >
         Inscribirme
       </Button>

@@ -21,6 +21,11 @@ import {
   forwardReadyWrapper,
   type LeadRecord,
 } from "@/lib/templates";
+import {
+  COURSE_TIERS,
+  SOFTWARE_REGISTRY,
+  type SoftwareKey,
+} from "@/components/awa/data";
 
 const INBOX = "awa3dstd@gmail.com";
 
@@ -141,6 +146,20 @@ export async function processLead(
   // - contact → contact template
   const hasCoursePlan = opts.source === "course" && opts.courseId && opts.courseName;
 
+  // Resolve the course tier from COURSE_TIERS so we can pull the `software` array
+  // and inject it into the plan email (v4 — 2026-08-15).
+  const courseTier = opts.courseId
+    ? COURSE_TIERS.find((c) => c.id === opts.courseId) || null
+    : null;
+  const courseSoftware = courseTier?.software
+    ? courseTier.software
+        .map((k: SoftwareKey) => {
+          const sw = SOFTWARE_REGISTRY[k];
+          return sw ? { name: sw.name, vendor: sw.vendor } : null;
+        })
+        .filter((x): x is { name: string; vendor: string } => x !== null)
+    : [];
+
   const autoResponseHtml = hasCoursePlan
     ? coursePlanHtmlFor(opts.courseId!, {
         name: lead.name,
@@ -148,6 +167,7 @@ export async function processLead(
         courseTagline: opts.courseTagline || "",
         price: opts.coursePrice || "",
         region: opts.courseRegion || "",
+        software: courseSoftware,
       })
     : opts.source === "course" && opts.courseName
       ? autoResponseEnrollHtml(lead.name, opts.courseName)

@@ -192,12 +192,95 @@ export const TESTIMONIALS: Testimonial[] = [
 // ============================================================
 // COURSES — Pricing by region
 // ============================================================
+
+/**
+ * Software logos available for courses.
+ * Each entry references an SVG in /public/software-logos/.
+ */
+export type SoftwareKey =
+  | "sketchup"
+  | "vray"
+  | "photoshop"
+  | "3dsmax"
+  | "illustrator"
+  | "ai-generic";
+
+export interface SoftwareInfo {
+  key: SoftwareKey;
+  name: string;
+  logo: string; // path to SVG
+  vendor: string;
+}
+
+/**
+ * Master registry of software used across all courses.
+ * Order matters — the rendering will preserve this order.
+ */
+export const SOFTWARE_REGISTRY: Record<SoftwareKey, SoftwareInfo> = {
+  sketchup: {
+    key: "sketchup",
+    name: "SketchUp",
+    logo: "/software-logos/sketchup.svg",
+    vendor: "Trimble",
+  },
+  vray: {
+    key: "vray",
+    name: "Chaos V-Ray",
+    logo: "/software-logos/vray.svg",
+    vendor: "Chaos",
+  },
+  photoshop: {
+    key: "photoshop",
+    name: "Photoshop",
+    logo: "/software-logos/photoshop.svg",
+    vendor: "Adobe",
+  },
+  "3dsmax": {
+    key: "3dsmax",
+    name: "3ds Max",
+    logo: "/software-logos/3dsmax.svg",
+    vendor: "Autodesk",
+  },
+  illustrator: {
+    key: "illustrator",
+    name: "Illustrator",
+    logo: "/software-logos/illustrator.svg",
+    vendor: "Adobe",
+  },
+  "ai-generic": {
+    key: "ai-generic",
+    name: "AI Generativa",
+    logo: "/software-logos/ai-generic.svg",
+    vendor: "Multi-modelo",
+  },
+};
+
+export interface StudyPlanModule {
+  title: string;
+  duration: string;
+  topics: string[];
+  deliverable?: string;
+}
+
+export interface StudyPlan {
+  totalHours: string;
+  methodology: string;
+  modules: StudyPlanModule[];
+  materials: string[];
+  evaluation: string;
+  certification: string;
+}
+
 export interface CourseTier {
   id: string;
   name: string;
   tagline: string;
   description: string;
   includes: string[];
+  /** Software keys taught in this course (cumulative across levels). */
+  software: SoftwareKey[];
+  /** Ultra-detailed study plan used in the auto-response email. */
+  studyPlan: StudyPlan;
   highlighted?: boolean;
   badge?: string;
 }
@@ -208,7 +291,7 @@ export const COURSE_TIERS: CourseTier[] = [
     name: "Curso Básico",
     tagline: "Introducción al modelado 3D arquitectónico",
     description:
-      "Fundamentos de modelado 3D aplicado a arquitectura: interfaces, navegación en el espacio 3D, modelado de espacios simples, exportación.",
+      "Fundamentos de modelado 3D aplicado a arquitectura: interfaces, navegación en el espacio 3D, modelado de espacios simples, exportación. Se trabaja con SketchUp y Chaos V-Ray desde el primer módulo.",
     includes: [
       "12 horas de video",
       "Proyecto guiado: espacio residencial",
@@ -216,13 +299,79 @@ export const COURSE_TIERS: CourseTier[] = [
       "Certificado de finalización",
       "Soporte por email (48h)",
     ],
+    software: ["sketchup", "vray"],
+    studyPlan: {
+      totalHours: "12 horas",
+      methodology:
+        "Aprendizaje basado en proyectos (PBL). Cada módulo combina teoría corta + demostración en vivo + práctica guiada + ejercicio independiente.",
+      modules: [
+        {
+          title: "Módulo 1 · Introducción a SketchUp",
+          duration: "3 horas",
+          topics: [
+            "Interfaz, navegación y atajos esenciales",
+            "Configuración de unidades y plantillas arquitectónicas",
+            "Herramientas de dibujo básicas: línea, rectángulo, círculo, arco",
+            "Extrusión y empuje/tirón (Push/Pull)",
+            "Organización: grupos, componentes y capas",
+          ],
+          deliverable: "Modelo de un cubículo 3x3m",
+        },
+        {
+          title: "Módulo 2 · Modelado arquitectónico en SketchUp",
+          duration: "3 horas",
+          topics: [
+            "Importar planos CAD como referencia",
+            "Modelado de muros, puertas y ventanas paramétricas",
+            "Escaleras, muebles fijos y mobiliario básico",
+            "Topografía y terreno (Sandbox)",
+            "Geometría limpia y buenas prácticas",
+          ],
+          deliverable: "Vivienda unifamiliar completa",
+        },
+        {
+          title: "Módulo 3 · Introducción a Chaos V-Ray",
+          duration: "3 horas",
+          topics: [
+            "Instalación y configuración del render engine",
+            "Tipos de luz en V-Ray: Sun, Sky, IES, Rectangular Light",
+            "Cámaras V-Ray: físicas, exposición y profundidad de campo",
+            "Materiales V-Ray básicos: Generic, Diffuse, Reflection",
+            "Render settings: calidad vs. velocidad",
+          ],
+          deliverable: "Render interior con luz natural",
+        },
+        {
+          title: "Módulo 4 · Render final y exportación",
+          duration: "3 horas",
+          topics: [
+            "Setup de escena para render final",
+            "Bucket vs. Progressive rendering",
+            "Elementos de render (canal alfa, Z-depth, reflection)",
+            "Exportación a PNG/TIFF en alta resolución",
+            "Introducción a post-producción básica",
+          ],
+          deliverable: "Render fotorrealista de proyecto residencial",
+        },
+      ],
+      materials: [
+        "Licencia SketchUp Make 2017 (gratis) o Pro (trial 30 días)",
+        "V-Ray SketchUp trial 30 días",
+        "Librería de componentes 3D (Sketchup 3D Warehouse)",
+        "5 escenas demo descargables",
+      ],
+      evaluation:
+        "Evaluación continua con feedback del instructor. Proyecto final evaluado con rúbrica (modelado, iluminación, materiales, composición).",
+      certification:
+        "Certificado digital de finalización emitido por AWA 3D Studio al aprobar el proyecto final.",
+    },
   },
   {
     id: "intermediate",
     name: "Curso Intermedio",
     tagline: "Rendering fotorrealista y materiales avanzados",
     description:
-      "Materiales PBR, iluminación HDRI, cámaras virtuales y post-producción. Lleva tus renders al siguiente nivel con workflows profesionales.",
+      "Materiales PBR, iluminación HDRI, cámaras virtuales y post-producción con Photoshop. Lleva tus renders al siguiente nivel con workflows profesionales. Software: SketchUp, V-Ray y Photoshop.",
     includes: [
       "20 horas de video",
       "Proyecto guiado: interior fotorrealista",
@@ -230,6 +379,85 @@ export const COURSE_TIERS: CourseTier[] = [
       "5 HDRI exclusivos",
       "Soporte prioritario (24h)",
     ],
+    software: ["sketchup", "vray", "photoshop"],
+    studyPlan: {
+      totalHours: "20 horas",
+      methodology:
+        "Workshop intensivo con feedback 1:1 en cada proyecto. Énfasis en técnicas profesionales usadas en estudios de arquitectura top.",
+      modules: [
+        {
+          title: "Módulo 1 · Repaso y setup profesional",
+          duration: "2 horas",
+          topics: [
+            "Workflow profesional SketchUp → V-Ray",
+            "Optimización de geometría para render",
+            "Escenas proxy y componentes V-Ray",
+            "Organización de materiales y librerías",
+          ],
+          deliverable: "Escena optimizada lista para render",
+        },
+        {
+          title: "Módulo 2 · Materiales PBR avanzados en V-Ray",
+          duration: "5 horas",
+          topics: [
+            "Material VRayMtl en profundidad: reflection, refraction, BRDF",
+            "Texturas PBR: Albedo, Roughness, Normal, Bump, Displacement",
+            "Creación de materiales realistas: madera, metal, vidrio, tela, hormigón",
+            "Subsurface scattering (piel, mármol, cera)",
+            "Librería personal de materiales",
+          ],
+          deliverable: "Set de 10 materiales PBR propios",
+        },
+        {
+          title: "Módulo 3 · Iluminación HDRI y cámaras",
+          duration: "4 horas",
+          topics: [
+            "HDRI: captura, edición y uso como luz ambiental",
+            "Sun system + Sky en exteriores arquitectónicos",
+            "Tres puntos de luz y luz natural cinematográfica",
+            "Cámaras físicas: focal length, exposure, white balance",
+            "Composición: thirds, leading lines, framing arquitectónico",
+          ],
+          deliverable: "Render interior día y noche de la misma escena",
+        },
+        {
+          title: "Módulo 4 · Post-producción con Photoshop",
+          duration: "6 horas",
+          topics: [
+            "Workspace de Photoshop para arquitectura",
+            "Render elements: cómo usar canal alfa, Z-depth, reflection",
+            "Ajustes no destructivos: niveles, curvas, HSL, balance color",
+            "Composición y collage de personas, vegetación, mobiliario",
+            "Máscaras y blend modes para realismo",
+            "Ajustes finales: dodge, burn, vignette, grain",
+          ],
+          deliverable: "Render post-producido nivel portafolio",
+        },
+        {
+          title: "Módulo 5 · Proyecto final",
+          duration: "3 horas",
+          topics: [
+            "Brief del proyecto: interior completo a elegir",
+            "Modelado + materiales + iluminación + render",
+            "Post-producción en Photoshop",
+            "Presentación final y feedback grupal",
+          ],
+          deliverable: "Render fotorrealista con post-producción",
+        },
+      ],
+      materials: [
+        "Todos los materiales del Curso Básico",
+        "Licencia Adobe Photoshop (trial 7 días o Photography Plan)",
+        "Librería de 50 materiales PBR profesionales",
+        "5 HDRI exclusivos AWA 3D Studio",
+        "10 texturas de alta resolución (8K)",
+        "Acceso a comunidad Discord premium",
+      ],
+      evaluation:
+        "Proyecto final evaluado con rúbrica profesional (materiales, iluminación, composición, post-producción). Feedback detallado por escrito.",
+      certification:
+        "Certificado digital de finalización + sello de calidad AWA 3D Studio si el proyecto final supera 85/100.",
+    },
     highlighted: true,
     badge: "Más popular",
   },
@@ -238,7 +466,7 @@ export const COURSE_TIERS: CourseTier[] = [
     name: "Curso Avanzado",
     tagline: "Animación arquitectónica y recorridos 360°",
     description:
-      "Cinematografía 3D, animación de cámara, recorridos 360° interactivos y sound design. Producción de piezas audiovisuales de alto impacto.",
+      "Cinematografía 3D, animación de cámara, recorridos 360° interactivos y sound design. Software: SketchUp, V-Ray, 3ds Max y Photoshop para post-producción de alto impacto.",
     includes: [
       "28 horas de video",
       "Proyecto guiado: animación cinematográfica",
@@ -246,13 +474,104 @@ export const COURSE_TIERS: CourseTier[] = [
       "Sound design kit",
       "Mentoría 1:1 (2 sesiones)",
     ],
+    software: ["sketchup", "vray", "photoshop", "3dsmax"],
+    studyPlan: {
+      totalHours: "28 horas",
+      methodology:
+        "Clase magistral + mentoring 1:1 (2 sesiones incluidas). Enfoque cinematográfico aplicado a arquitectura.",
+      modules: [
+        {
+          title: "Módulo 1 · Introducción a 3ds Max",
+          duration: "4 horas",
+          topics: [
+            "Interfaz, navegación y personalización de 3ds Max",
+            "Importar modelos desde SketchUp: geometría y materiales",
+            "Modelado avanzado: polígonos, modifiers, booleanos",
+            "Organización: layers, grupos, xrefs",
+          ],
+          deliverable: "Escena migrada de SketchUp a 3ds Max",
+        },
+        {
+          title: "Módulo 2 · V-Ray para 3ds Max",
+          duration: "5 horas",
+          topics: [
+            "Diferencias entre V-Ray SketchUp y V-Ray 3ds Max",
+            "VRayMtl avanzado: coat, sheen, displacement",
+            "VRayLight: plane, dome, mesh, IES",
+            "VRayCamera: physical, exposure, lens effects",
+            "Render settings avanzados: DMC sampler, GI, caustics",
+          ],
+          deliverable: "Render estático nivel portafolio en 3ds Max",
+        },
+        {
+          title: "Módulo 3 · Animación arquitectónica",
+          duration: "6 horas",
+          topics: [
+            "Cámaras animadas: keyframes, trajectory, path constraint",
+            "Movimiento cinematográfico: dolly, crane, gimbal",
+            "Animación de objetos: puertas, vehículos, personas",
+            "Timeline, track view y animación no lineal",
+            "Render de secuencias: frame rate, resolution, output",
+          ],
+          deliverable: "Animación de 15 segundos renderizada",
+        },
+        {
+          title: "Módulo 4 · Recorridos 360° interactivos",
+          duration: "4 horas",
+          topics: [
+            "Setup de cámara 360° (spherical) en V-Ray",
+            "Render stereo para VR (side-by-side)",
+            "Hotspots y navegación: software (Pano2VR, Marzipano)",
+            "Hosting y publicación web",
+            "Integración con Google Cardboard / Quest",
+          ],
+          deliverable: "Recorrido 360° navegable publicado",
+        },
+        {
+          title: "Módulo 5 · Post-producción avanzada en Photoshop",
+          duration: "5 horas",
+          topics: [
+            "Post-producción de video frames: secuencia → timeline",
+            "Color grading profesional: LUTs y ajustes",
+            "Composición de personas, vehículos, vegetación animada",
+            "Pintura digital y matte painting",
+            "Output para web, cine y redes sociales",
+          ],
+          deliverable: "Animación finalizada con post-producción",
+        },
+        {
+          title: "Módulo 6 · Sound design y entrega",
+          duration: "4 horas",
+          topics: [
+            "Sound design kit incluido: ambientes, SFX, música",
+            "Edición de audio en Adobe Audition / DaVinci Resolve",
+            "Sincronización de audio con video",
+            "Output final: MP4, MOV, H.264, H.265",
+            "Estructura de presentación al cliente",
+          ],
+          deliverable: "Animación arquitectónica completa con audio",
+        },
+      ],
+      materials: [
+        "Todos los materiales de niveles anteriores",
+        "Licencia Autodesk 3ds Max (trial 30 días o Educational 3 años)",
+        "Adobe Photoshop (incluido en plan Creative Cloud)",
+        "Templates de animación AWA 3D Studio (5 incluidos)",
+        "Sound design kit: 50 archivos de audio profesionales",
+        "Librería de cámaras y rigs de animación",
+      ],
+      evaluation:
+        "Proyecto final: animación arquitectónica de 30-60 segundos + recorrido 360°. Evaluación con rúbrica cinematográfica (movimiento, composición, iluminación, sound design).",
+      certification:
+        "Certificado digital avanzado + mención en portafolio AWA 3D Studio (con permiso del estudiante).",
+    },
   },
   {
     id: "master",
     name: "Curso Master",
-    tagline: "Pack completo: modelado + rendering + animación",
+    tagline: "Programa completo + branding + marketing para arquitectos",
     description:
-      "El programa definitivo. Combina los tres niveles anteriores más contenido exclusivo de branding de estudio arquitectónico y captación de clientes.",
+      "El programa definitivo. Combina los tres niveles anteriores más branding personal, marketing digital y plan de negocio para que el estudiante salga con marca propia lista. Software: SketchUp, V-Ray, Photoshop, 3ds Max, Adobe Illustrator e IA generativa para marketing.",
     includes: [
       "60+ horas de video",
       "4 proyectos guiados completos",
@@ -260,7 +579,124 @@ export const COURSE_TIERS: CourseTier[] = [
       "Plantillas de propuesta comercial",
       "Mentoría 1:1 (6 sesiones)",
       "Acceso de por vida",
+      "Marca personal + web + plan de marketing",
     ],
+    software: ["sketchup", "vray", "photoshop", "3dsmax", "illustrator", "ai-generic"],
+    studyPlan: {
+      totalHours: "60+ horas",
+      methodology:
+        "Programa inmersivo con mentoría 1:1 (6 sesiones). Combinación de clases técnicas + workshops de branding + sprints de marketing. El estudiante sale con marca personal y plan de marketing operativos.",
+      modules: [
+        {
+          title: "Bloque A · Fundamentos (Curso Básico)",
+          duration: "12 horas",
+          topics: [
+            "Módulo completo de SketchUp",
+            "Módulo completo de Chaos V-Ray básico",
+            "Modelado arquitectónico y render inicial",
+          ],
+          deliverable: "Proyecto residencial renderizado",
+        },
+        {
+          title: "Bloque B · Rendering fotorrealista (Curso Intermedio)",
+          duration: "20 horas",
+          topics: [
+            "Materiales PBR avanzados en V-Ray",
+            "Iluminación HDRI y composición",
+            "Post-producción con Photoshop",
+            "Proyecto interior fotorrealista",
+          ],
+          deliverable: "Render fotorrealista con post-producción",
+        },
+        {
+          title: "Bloque C · Animación y 360° (Curso Avanzado)",
+          duration: "28 horas",
+          topics: [
+            "3ds Max y V-Ray avanzado",
+            "Animación arquitectónica cinematográfica",
+            "Recorridos 360° interactivos",
+            "Post-producción de video y sound design",
+          ],
+          deliverable: "Animación arquitectónica + recorrido 360°",
+        },
+        {
+          title: "Bloque D · Branding personal con Adobe Illustrator",
+          duration: "8 horas",
+          topics: [
+            "Workspace de Illustrator para branding",
+            "Diseño de logotipo personal: tipografía, isotipo, paleta",
+            "Sistema de marca: tarjetas, hoja membrete, plantillas",
+            "Manual de marca simplificado (brand book)",
+            "Aplicación a redes sociales (avatar, banner, plantillas)",
+          ],
+          deliverable: "Logotipo + manual de marca básico",
+        },
+        {
+          title: "Bloque E · Sitio web personal",
+          duration: "6 horas",
+          topics: [
+            "Estructura de portafolio web: home, proyectos, about, contacto",
+            "Plataformas: Cargo, Squarespace, Webflow, Framer, WordPress",
+            "Optimización de renders para web (formato, peso, SEO)",
+            "Formularios de contacto integrados",
+            "Analytics y tracking (Google Analytics, Meta Pixel)",
+          ],
+          deliverable: "Portafolio web publicado y operativo",
+        },
+        {
+          title: "Bloque F · Marketing con IA generativa",
+          duration: "6 horas",
+          topics: [
+            "IA para contenido: ChatGPT, Claude, Jasper (textos, propuestas)",
+            "IA para visuales: Midjourney, DALL-E, Stable Diffusion (moodboards)",
+            "Automatización de redes sociales: Buffer, Later, Metricool",
+            "Email marketing: Mailchimp, Brevo (plantillas, secuencias)",
+            "Estrategia de contenido: calendario, formatos, hashtags",
+          ],
+          deliverable: "Plan de marketing 90 días con prompts IA",
+        },
+        {
+          title: "Bloque G · Plan de negocio y captación de clientes",
+          duration: "4 horas",
+          topics: [
+            "Estructura de precios: por hora, por proyecto, paquetes",
+            "Propuesta comercial (plantilla incluida)",
+            "Contratos y términos de pago",
+            "Captación de clientes: LinkedIn, Instagram, plataformas freelance",
+            "Pipeline de leads y CRM básico (Notion / Trello)",
+          ],
+          deliverable: "Plan de negocio documentado",
+        },
+        {
+          title: "Bloque H · Mentoría y entrega final",
+          duration: "6 horas",
+          topics: [
+            "6 sesiones 1:1 con instructor AWA 3D Studio",
+            "Revisión de portafolio completo",
+            "Revisión de marca personal y web",
+            "Revisión de plan de marketing",
+            "Demo day: presentación final del estudiante",
+          ],
+          deliverable: "Demo final + portafolio completo",
+        },
+      ],
+      materials: [
+        "Todos los materiales de los 3 niveles anteriores",
+        "Adobe Illustrator (incluido en Creative Cloud)",
+        "Acceso a IA generativa (ChatGPT Plus, Midjourney)",
+        "Plantillas de marca: logo, tarjetas, manual (10 plantillas)",
+        "Plantillas web: Cargo, Squarespace, Framer",
+        "Plantillas de propuesta comercial (5 incluidas)",
+        "Plan de marketing 90 días (plantilla editable)",
+        "Librería completa: 200+ materiales PBR, 20 HDRI",
+        "Mentoría 1:1 (6 sesiones de 1 hora)",
+        "Acceso de por vida a actualizaciones",
+      ],
+      evaluation:
+        "Evaluación por bloques con feedback continuo. Demo day final: presentación completa del estudiante (portafolio + marca + web + plan de marketing). Aprobación requiere superar 80/100 en cada bloque.",
+      certification:
+        "Certificado Master AWA 3D Studio + sello de excelencia + recomendación LinkedIn escrita por el instructor + oportunidad de colaboración como freelancer asociado al estudio.",
+    },
   },
 ];
 
