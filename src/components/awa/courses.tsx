@@ -26,7 +26,9 @@ import {
   COUNTRY_LIST,
   COUNTRY_NAME_BY_CODE,
   getPricingForCountry,
+  SOFTWARE_REGISTRY,
   type CourseTier,
+  type SoftwareKey,
   CONTACT_INFO,
 } from "./data";
 import { fadeUp, stagger, viewportOnce } from "./motion";
@@ -299,6 +301,33 @@ function CourseCard({
       <p className="text-xs text-[#71717a] mb-5 min-h-[2.5rem]">
         {tier.tagline}
       </p>
+
+      {/* Software logos — official brand marks only (no text labels) */}
+      <div className="mb-5">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[8px] uppercase tracking-[0.22em] text-[#71717a] font-heading font-semibold">
+            Software
+          </span>
+          <div className="h-px flex-1 bg-gradient-to-r from-[#27272e] via-[#27272e]/60 to-transparent" />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {tier.software.map((key: SoftwareKey) => {
+            const sw = SOFTWARE_REGISTRY[key];
+            if (!sw) return null;
+            return (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={key}
+                src={sw.logo}
+                alt={`${sw.name} logo`}
+                title={`${sw.name} · ${sw.vendor}`}
+                className="h-5 w-auto object-contain opacity-75 hover:opacity-100 transition-opacity duration-200"
+                loading="lazy"
+              />
+            );
+          })}
+        </div>
+      </div>
 
       <div className="mb-5">
         <div className="flex items-baseline gap-1.5">
