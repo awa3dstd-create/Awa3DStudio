@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Check, Globe } from "lucide-react";
+import { Check, Globe, MapPin } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -19,245 +19,120 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
   COURSE_TIERS,
-  PRICING_BY_REGION,
-  COUNTRY_TO_REGION,
-  SOFTWARE_REGISTRY,
-  type RegionPricing,
+  COUNTRY_LIST,
+  COUNTRY_NAME_BY_CODE,
+  getPricingForCountry,
   type CourseTier,
-  type SoftwareKey,
   CONTACT_INFO,
 } from "./data";
 import { fadeUp, stagger, viewportOnce } from "./motion";
 
-function formatPrice(price: number, symbol: string) {
-  // Format with thousands separator; symbol prepended (EUR/USD/GBP) or appended (¥/₩)
-  const formatted = price.toLocaleString("en-US");
-  const suffixCurrencies = ["¥", "₩", "﷼", "د.إ"];
-  const isSuffix = suffixCurrencies.includes(symbol);
-  return isSuffix ? `${formatted}${symbol}` : `${symbol}${formatted}`;
-}
-
-/**
- * Best-effort ISO 3166-1 alpha-2 → country name mapping.
- * Covers all countries referenced in COUNTRY_TO_REGION (data.ts) plus a few
- * extras so the enrollment form is pre-filled correctly when ipapi.co returns
- * only a country code (e.g. Cloudflare CF-IPCountry header path).
- */
-const ISO_TO_COUNTRY_NAME: Record<string, string> = {
-  US: "Estados Unidos",
-  CA: "Canadá",
-  MX: "México",
-  GT: "Guatemala",
-  BZ: "Belice",
-  SV: "El Salvador",
-  HN: "Honduras",
-  NI: "Nicaragua",
-  CR: "Costa Rica",
-  PA: "Panamá",
-  CU: "Cuba",
-  DO: "República Dominicana",
-  PR: "Puerto Rico",
-  CO: "Colombia",
-  VE: "Venezuela",
-  EC: "Ecuador",
-  PE: "Perú",
-  BO: "Bolivia",
-  CL: "Chile",
-  AR: "Argentina",
-  UY: "Uruguay",
-  PY: "Paraguay",
-  BR: "Brasil",
-  ES: "España",
-  PT: "Portugal",
-  AD: "Andorra",
-  GQ: "Guinea Ecuatorial",
-  GB: "Reino Unido",
-  IE: "Irlanda",
-  DE: "Alemania",
-  FR: "Francia",
-  IT: "Italia",
-  NL: "Países Bajos",
-  BE: "Bélgica",
-  LU: "Luxemburgo",
-  CH: "Suiza",
-  AT: "Austria",
-  SE: "Suecia",
-  NO: "Noruega",
-  DK: "Dinamarca",
-  FI: "Finlandia",
-  IS: "Islandia",
-  JP: "Japón",
-  KR: "Corea del Sur",
-  CN: "China",
-  TW: "Taiwán",
-  HK: "Hong Kong",
-  SG: "Singapur",
-  MY: "Malasia",
-  TH: "Tailandia",
-  VN: "Vietnam",
-  ID: "Indonesia",
-  PH: "Filipinas",
-  IN: "India",
-  PK: "Pakistán",
-  BD: "Bangladés",
-  AU: "Australia",
-  NZ: "Nueva Zelanda",
-  FJ: "Fiyi",
-  PG: "Papúa Nueva Guinea",
-  SA: "Arabia Saudita",
-  AE: "Emiratos Árabes Unidos",
-  QA: "Catar",
-  KW: "Kuwait",
-  BH: "Baréin",
-  OM: "Omán",
-  IR: "Irán",
-  IQ: "Irak",
-  IL: "Israel",
-  JO: "Jordania",
-  LB: "Líbano",
-  SY: "Siria",
-  YE: "Yemen",
-  PS: "Palestina",
-  TR: "Turquía",
-  EG: "Egipto",
-  LY: "Libia",
-  TN: "Túnez",
-  DZ: "Argelia",
-  MA: "Marruecos",
-  SD: "Sudán",
-  SS: "Sudán del Sur",
-  ET: "Etiopía",
-  ER: "Eritrea",
-  DJ: "Yibuti",
-  SO: "Somalia",
-  KE: "Kenia",
-  UG: "Uganda",
-  TZ: "Tanzania",
-  RW: "Ruanda",
-  BI: "Burundi",
-  MZ: "Mozambique",
-  ZW: "Zimbabue",
-  ZA: "Sudáfrica",
-  NA: "Namibia",
-  BW: "Botsuana",
-  AO: "Angola",
-  ZM: "Zambia",
-  MW: "Malaui",
-  MG: "Madagascar",
-  CM: "Camerún",
-  NG: "Nigeria",
-  GH: "Ghana",
-  CI: "Costa de Marfil",
-  SN: "Senegal",
-  ML: "Mali",
-  BF: "Burkina Faso",
-  NE: "Níger",
-  TD: "Chad",
-  CF: "República Centroafricana",
-  CG: "Congo",
-  CD: "República Democrática del Congo",
-  GA: "Gabón",
-  GQ: "Guinea Ecuatorial",
-  RU: "Rusia",
-  UA: "Ucrania",
-  BY: "Bielorrusia",
-  PL: "Polonia",
-  CZ: "Chequia",
-  SK: "Eslovaquia",
-  HU: "Hungría",
-  RO: "Rumania",
-  BG: "Bulgaria",
-  RS: "Serbia",
-  HR: "Croacia",
-  SI: "Eslovenia",
-  BA: "Bosnia y Herzegovina",
-  MK: "Macedonia del Norte",
-  ME: "Montenegro",
-  AL: "Albania",
-  GR: "Grecia",
-  EE: "Estonia",
-  LV: "Letonia",
-  LT: "Lituania",
-  MD: "Moldavia",
-};
-
-function isoToCountryName(iso: string): string | undefined {
-  return ISO_TO_COUNTRY_NAME[iso.toUpperCase()];
+function formatPrice(price: number) {
+  // All prices are USD now — always show with $ prefix
+  return `$${price.toLocaleString("en-US")}`;
 }
 
 export function Courses() {
-  const [region, setRegion] = useState<RegionPricing>(PRICING_BY_REGION[0]);
-  const [detectedCountry, setDetectedCountry] = useState<string>("");
+  // Country code (ISO 3166-1 alpha-2). Empty string = not yet detected.
+  const [countryCode, setCountryCode] = useState<string>("");
+  // Human-readable country name (for display + enrollment form pre-fill)
+  const [detectedCountryName, setDetectedCountryName] = useState<string>("");
+  // Whether the current selection was auto-detected (vs. user manual override)
+  const [autoDetected, setAutoDetected] = useState<boolean>(false);
+  // "Detecting..." flag for the initial mount window
+  const [detecting, setDetecting] = useState<boolean>(true);
   const [enrollCourse, setEnrollCourse] = useState<CourseTier | null>(null);
 
-  // Detect visitor region AND country name on mount
+  // Pricing derived from selected country (memoized).
+  const pricing = useMemo(() => getPricingForCountry(countryCode), [countryCode]);
+  const countryName = useMemo(
+    () =>
+      countryCode
+        ? COUNTRY_NAME_BY_CODE[countryCode] || "Internacional"
+        : "Internacional",
+    [countryCode]
+  );
+
+  // Detect visitor country on mount — three strategies in order:
+  //   1) Cloudflare CF-IPCountry header (only on CF Pages deployment)
+  //   2) ipapi.co JSON API (works everywhere, ~4s timeout)
+  //   3) navigator.language fallback (best-effort)
   useEffect(() => {
     let cancelled = false;
 
     const detect = async () => {
-      // 1) Try Cloudflare header (only available when deployed behind CF)
+      // 1) Cloudflare header
       try {
         const cfRes = await fetch("/", { method: "HEAD" });
         const cfCountry = cfRes.headers.get("CF-IPCountry");
-        if (cfCountry && cfCountry !== "XX") {
-          const regionCode = COUNTRY_TO_REGION[cfCountry] ?? "OTHER";
-          const r = PRICING_BY_REGION.find((p) => p.code === regionCode);
-          if (r && !cancelled) setRegion(r);
-          // Map ISO code to country name (best-effort)
-          const countryName = isoToCountryName(cfCountry);
-          if (countryName && !cancelled) setDetectedCountry(countryName);
+        if (cfCountry && cfCountry !== "XX" && !cancelled) {
+          setCountryCode(cfCountry);
+          setDetectedCountryName(
+            COUNTRY_NAME_BY_CODE[cfCountry] || cfCountry
+          );
+          setAutoDetected(true);
+          setDetecting(false);
           return;
         }
       } catch {
-        /* ignore — local dev */
+        /* local dev */
       }
 
-      // 2) Try ipapi.co — returns both country_code AND country_name
+      // 2) ipapi.co
       try {
         const res = await fetch("https://ipapi.co/json/", {
           signal: AbortSignal.timeout(4000),
         });
         if (res.ok) {
           const data = await res.json();
-          const countryCode = data?.country_code as string | undefined;
-          const countryName = data?.country_name as string | undefined;
-          if (countryCode) {
-            const regionCode = COUNTRY_TO_REGION[countryCode] ?? "OTHER";
-            const r = PRICING_BY_REGION.find((p) => p.code === regionCode);
-            if (r && !cancelled) setRegion(r);
+          const iso = (data?.country_code as string | undefined)?.toUpperCase();
+          const name = data?.country_name as string | undefined;
+          if (iso && !cancelled) {
+            setCountryCode(iso);
+            setDetectedCountryName(name || COUNTRY_NAME_BY_CODE[iso] || iso);
+            setAutoDetected(true);
+            setDetecting(false);
+            return;
           }
-          if (countryName && !cancelled) setDetectedCountry(countryName);
+        }
+      } catch {
+        /* network blocked / timeout */
+      }
+
+      // 3) navigator.language
+      try {
+        const lang = navigator.language || "en-US";
+        const iso = lang.split("-")[1]?.toUpperCase();
+        if (iso && !cancelled) {
+          setCountryCode(iso);
+          setDetectedCountryName(COUNTRY_NAME_BY_CODE[iso] || iso);
+          setAutoDetected(true);
+          setDetecting(false);
           return;
         }
       } catch {
         /* ignore */
       }
 
-      // 3) Fallback: navigator.language
-      try {
-        const lang = navigator.language || "en-US";
-        const country = lang.split("-")[1]?.toUpperCase();
-        if (country) {
-          const regionCode = COUNTRY_TO_REGION[country] ?? "OTHER";
-          const r = PRICING_BY_REGION.find((p) => p.code === regionCode);
-          if (r && !cancelled) setRegion(r);
-          const countryName = isoToCountryName(country);
-          if (countryName && !cancelled) setDetectedCountry(countryName);
-        }
-      } catch {
-        /* ignore */
-      }
+      // 4) Give up — leave empty so user picks manually
+      if (!cancelled) setDetecting(false);
     };
 
     detect();
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Manual override via dropdown — clears autoDetected flag.
+  const handleCountryChange = useCallback((code: string) => {
+    setCountryCode(code);
+    setDetectedCountryName(COUNTRY_NAME_BY_CODE[code] || code);
+    setAutoDetected(false);
   }, []);
 
   return (
@@ -287,49 +162,76 @@ export function Courses() {
             className="text-[#a1a1aa] mt-6 max-w-xl"
           >
             Cuatro niveles, desde los fundamentos del modelado 3D hasta la
-            animación cinematográfica. Precios ajustados a tu región.
+            animación cinematográfica. Precios en USD ajustados a tu país.
           </motion.p>
 
-          {/* Region selector */}
+          {/* Country selector — auto-detected with manual override */}
           <motion.div
             variants={fadeUp}
             className="flex flex-wrap items-center gap-3 mt-8"
           >
             <div className="flex items-center gap-2 text-[#71717a] text-xs">
-              <Globe size={14} />
+              <MapPin size={14} />
               <span className="uppercase tracking-[0.15em] font-heading font-semibold">
-                Región:
+                Elige tu país:
               </span>
             </div>
             <Select
-              value={region.code}
-              onValueChange={(code) => {
-                const r = PRICING_BY_REGION.find((p) => p.code === code);
-                if (r) setRegion(r);
-              }}
+              value={countryCode || "OTHER"}
+              onValueChange={handleCountryChange}
             >
               <SelectTrigger className="w-[260px] bg-[#0a0a0f] border-[#1e1e2a] text-white text-sm">
-                <SelectValue placeholder="Selecciona tu región" />
+                <SelectValue placeholder="Selecciona tu país" />
               </SelectTrigger>
-              <SelectContent className="bg-[#0f0f17] border-[#1e1e2a] max-h-[300px]">
-                {PRICING_BY_REGION.map((r) => (
+              <SelectContent className="bg-[#0f0f17] border-[#1e1e2a] max-h-[320px]">
+                {COUNTRY_LIST.map((c) => (
                   <SelectItem
-                    key={r.code}
-                    value={r.code}
+                    key={c.code}
+                    value={c.code}
                     className="text-white focus:bg-[#00c8b4]/10 focus:text-[#00c8b4]"
                   >
-                    {r.label} · {r.currency}
-                    {r.regionalBadge ? " · Precio regional" : ""}
+                    {c.name}
                   </SelectItem>
                 ))}
+                <SelectItem
+                  value="OTHER"
+                  className="text-[#a1a1aa] italic focus:bg-[#00c8b4]/10"
+                >
+                  Internacional / Otro
+                </SelectItem>
               </SelectContent>
             </Select>
-            {region.regionalBadge && (
+            {/* Detection status badge */}
+            {detecting ? (
+              <span className="px-2.5 py-1 text-[10px] font-heading font-semibold uppercase tracking-[0.15em] rounded-full bg-[#1e1e2a] text-[#a1a1aa] border border-[#1e1e2a] flex items-center gap-1.5">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#a1a1aa] animate-pulse" />
+                Detectando…
+              </span>
+            ) : autoDetected && countryCode ? (
               <span className="px-2.5 py-1 text-[10px] font-heading font-semibold uppercase tracking-[0.15em] rounded-full bg-[#00c8b4]/10 text-[#00c8b4] border border-[#00c8b4]/30">
-                Precio regional aplicado
+                Detectado automáticamente
+              </span>
+            ) : null}
+            {/* Regional badge */}
+            {pricing.regionalBadge && (
+              <span className="px-2.5 py-1 text-[10px] font-heading font-semibold uppercase tracking-[0.15em] rounded-full bg-[#00c8b4]/10 text-[#00c8b4] border border-[#00c8b4]/30">
+                {pricing.label}
               </span>
             )}
           </motion.div>
+
+          {/* Detected country line (helps user understand what happened) */}
+          {countryCode && (
+            <motion.p
+              variants={fadeUp}
+              className="text-[11px] text-[#71717a] mt-3 flex items-center gap-1.5"
+            >
+              <Globe size={11} className="text-[#52525b]" />
+              {autoDetected
+                ? `Tu ubicación detectada: ${detectedCountryName}. Si no es correcto, elige tu país manualmente.`
+                : `País seleccionado: ${countryName}.`}
+            </motion.p>
+          )}
         </motion.div>
 
         {/* Course grid */}
@@ -338,13 +240,13 @@ export function Courses() {
           whileInView="visible"
           viewport={viewportOnce}
           variants={stagger}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6"
         >
           {COURSE_TIERS.map((tier) => (
             <CourseCard
               key={tier.id}
               tier={tier}
-              region={region}
+              prices={pricing.prices}
               onEnroll={() => setEnrollCourse(tier)}
             />
           ))}
@@ -354,8 +256,11 @@ export function Courses() {
       {/* Enrollment modal */}
       <EnrollmentDialog
         course={enrollCourse}
-        region={region}
-        detectedCountry={detectedCountry}
+        countryCode={countryCode}
+        countryName={countryName}
+        detectedCountryName={detectedCountryName}
+        prices={pricing.prices}
+        pricingLabel={pricing.label}
         onClose={() => setEnrollCourse(null)}
       />
     </section>
@@ -364,90 +269,58 @@ export function Courses() {
 
 function CourseCard({
   tier,
-  region,
+  prices,
   onEnroll,
 }: {
   tier: CourseTier;
-  region: RegionPricing;
+  prices: Record<"basic" | "intermediate" | "advanced" | "master", number>;
   onEnroll: () => void;
 }) {
-  const price = region.prices[tier.id as keyof typeof region.prices];
+  const price = prices[tier.id as keyof typeof prices];
 
   return (
     <motion.article
       variants={fadeUp}
-      className={`relative p-4 md:p-5 rounded-sm border bg-[#0a0a0f] awa-card-hover flex flex-col ${
+      className={`relative p-6 md:p-7 rounded-sm border bg-[#0a0a0f] awa-card-hover flex flex-col ${
         tier.highlighted
           ? "border-[#00c8b4]/40"
           : "border-[#1e1e2a]"
       }`}
     >
       {tier.badge && (
-        <span className="absolute -top-3 left-4 px-2.5 py-1 text-[9px] font-heading font-semibold uppercase tracking-[0.15em] rounded-full bg-[#00c8b4] text-[#0a0a0f]">
+        <span className="absolute -top-3 left-6 px-3 py-1 text-[10px] font-heading font-semibold uppercase tracking-[0.15em] rounded-full bg-[#00c8b4] text-[#0a0a0f]">
           {tier.badge}
         </span>
       )}
 
-      <h3 className="font-heading font-bold text-base text-white mb-1">
+      <h3 className="font-heading font-bold text-lg text-white mb-1">
         {tier.name}
       </h3>
-      <p className="text-[11px] text-[#71717a] mb-3 min-h-[2rem] leading-snug">
+      <p className="text-xs text-[#71717a] mb-5 min-h-[2.5rem]">
         {tier.tagline}
       </p>
 
-      {/* Software logos — official brand marks only (no text labels) */}
-      <div className="mb-4">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-[8px] uppercase tracking-[0.22em] text-[#71717a] font-heading font-semibold">
-            Software
-          </span>
-          <div className="h-px flex-1 bg-gradient-to-r from-[#27272e] via-[#27272e]/60 to-transparent" />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {tier.software.map((key: SoftwareKey) => {
-            const sw = SOFTWARE_REGISTRY[key];
-            if (!sw) return null;
-            return (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={key}
-                src={sw.logo}
-                alt={`${sw.name} logo`}
-                title={`${sw.name} · ${sw.vendor}`}
-                className="h-5 w-auto object-contain opacity-75 hover:opacity-100 transition-opacity duration-200"
-                loading="lazy"
-              />
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="mb-4">
+      <div className="mb-5">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-2xl md:text-3xl font-heading font-bold text-white">
-            {formatPrice(price, region.symbol)}
+          <span className="text-3xl md:text-4xl font-heading font-bold text-white">
+            {formatPrice(price)}
           </span>
-          <span className="text-[11px] text-[#71717a]">{region.currency}</span>
+          <span className="text-xs text-[#71717a]">USD</span>
         </div>
-        {region.regionalBadge && (
-          <p className="text-[10px] text-[#00c8b4] mt-1 uppercase tracking-[0.15em] font-heading font-semibold">
-            Precio regional
-          </p>
-        )}
       </div>
 
-      <p className="text-[11px] text-[#a1a1aa] leading-relaxed mb-4 min-h-[4rem]">
+      <p className="text-xs text-[#a1a1aa] leading-relaxed mb-5 min-h-[4.5rem]">
         {tier.description}
       </p>
 
-      <ul className="space-y-2 mb-5 flex-1">
+      <ul className="space-y-2.5 mb-7 flex-1">
         {tier.includes.map((inc) => (
           <li
             key={inc}
-            className="flex items-start gap-2 text-[11px] text-[#a1a1aa]"
+            className="flex items-start gap-2 text-xs text-[#a1a1aa]"
           >
             <Check
-              size={13}
+              size={14}
               className="text-[#00c8b4] flex-shrink-0 mt-0.5"
               strokeWidth={2.5}
             />
@@ -459,7 +332,7 @@ function CourseCard({
       <Button
         type="button"
         onClick={onEnroll}
-        className="w-full bg-[#00c8b4] text-[#0a0a0f] hover:bg-[#00e5d0] font-semibold h-10 text-sm"
+        className="w-full bg-[#00c8b4] text-[#0a0a0f] hover:bg-[#00e5d0] font-semibold h-11"
       >
         Inscribirme
       </Button>
@@ -469,43 +342,30 @@ function CourseCard({
 
 function EnrollmentDialog({
   course,
-  region,
-  detectedCountry,
+  countryCode,
+  countryName,
+  detectedCountryName,
+  prices,
+  pricingLabel,
   onClose,
 }: {
   course: CourseTier | null;
-  region: RegionPricing;
-  detectedCountry: string;
+  countryCode: string;
+  countryName: string;
+  detectedCountryName: string;
+  prices: Record<"basic" | "intermediate" | "advanced" | "master", number>;
+  pricingLabel: string;
   onClose: () => void;
 }) {
   const [submitting, setSubmitting] = useState(false);
-  // Plan HTML recibido del backend tras la inscripción exitosa.
-  // Se muestra en un diálogo aparte como fallback cuando el email no llega
-  // (Gmail filtra onboarding@resend.dev en modo trial).
-  const [planHtml, setPlanHtml] = useState<string | null>(null);
-  const [planSubject, setPlanSubject] = useState<string>("");
   // Pre-fill the country field with the IP-detected country name.
-  // useEffect sincroniza el formulario cada vez que `detectedCountry` se actualiza
-  // (la detección de IP es async y puede llegar después de montado el componente)
-  // o cuando se abre el modal con un nuevo `course`.
+  // `key` on the form forces re-mount when `course` changes so the field
+  // re-syncs with the latest detectedCountryName value each time the dialog opens.
   const [form, setForm] = useState({
     name: "",
     email: "",
-    country: detectedCountry || region.label,
+    country: detectedCountryName || countryName,
   });
-  // Trackea si el usuario editó manualmente el campo país para no sobreescribirlo
-  const [countryTouched, setCountryTouched] = useState(false);
-
-  useEffect(() => {
-    // Solo auto-actualizar si el usuario no ha editado el campo manualmente
-    if (!countryTouched && (detectedCountry || region.label)) {
-      setForm((f) => ({
-        ...f,
-        country: detectedCountry || region.label,
-      }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [detectedCountry, region.label, course?.id]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -526,31 +386,17 @@ function EnrollmentDialog({
           name: form.name,
           email: form.email,
           service: `Inscripción curso: ${course.name}`,
-          message: `Inscripción al ${course.name} (${course.tagline}). País: ${form.country}. Precio mostrado: ${formatPrice(
-            region.prices[course.id as keyof typeof region.prices],
-            region.symbol
-          )} ${region.currency}.`,
-          // Metadatos extra para que el backend sepa qué plan enviar
-          courseId: course.id,
-          courseName: course.name,
-          courseTagline: course.tagline,
-          coursePrice: region.prices[course.id as keyof typeof region.prices],
-          courseCurrency: region.currency,
-          courseRegion: region.label,
+          message: `Inscripción al ${course.name} (${course.tagline}). País: ${form.country}. Tarifa aplicada: ${pricingLabel}. Precio mostrado: ${formatPrice(
+            prices[course.id as keyof typeof prices]
+          )} USD.`,
         };
         let success = false;
         let lastErr: any = null;
         let validationError: string | null = null;
-        let planData: {
-          planHtml?: string;
-          planSubject?: string;
-          trialMode?: boolean;
-          directDelivery?: boolean;
-        } = {};
         for (const url of endpoints) {
           try {
             const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 8000);
+            const timeout = setTimeout(() => controller.abort(), 5000);
             const res = await fetch(url, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -560,20 +406,6 @@ function EnrollmentDialog({
             clearTimeout(timeout);
             if (res.ok) {
               success = true;
-              // Captura el HTML del plan si el backend lo devuelve
-              try {
-                const data = await res.json();
-                if (data && typeof data.planHtml === "string") {
-                  planData = {
-                    planHtml: data.planHtml,
-                    planSubject: data.planSubject,
-                    trialMode: data.trialMode,
-                    directDelivery: data.directDelivery,
-                  };
-                }
-              } catch {
-                /* JSON parse falla → no hay plan para mostrar */
-              }
               break;
             } else if (res.status >= 400 && res.status < 500) {
               const data = await res.json().catch(() => ({}));
@@ -588,29 +420,9 @@ function EnrollmentDialog({
           }
         }
         if (success) {
-          // Toast según si el email llegó directo al cliente o no
-          if (planData.directDelivery) {
-            // Email enviado directamente al cliente (vía Brevo o Resend producción)
-            toast.success(
-              "¡Inscripción enviada! Te enviamos el plan del curso por email. También lo mostramos a continuación."
-            );
-          } else {
-            // Modo trial: el email va al inbox del estudio para reenvío manual.
-            // Mostrar el plan aquí mismo como fallback.
-            toast.success(
-              "¡Inscripción recibida! Te mostramos el plan de mentoría a continuación."
-            );
-          }
-          // Guardar el plan para mostrarlo en el diálogo de resultado
-          if (planData.planHtml) {
-            setPlanHtml(planData.planHtml);
-            setPlanSubject(planData.planSubject || "Plan de mentoría");
-          } else {
-            // No hay plan HTML → cerrar el diálogo de inscripción
-            setForm({ name: "", email: "", country: detectedCountry || region.label });
-            setCountryTouched(false);
-            onClose();
-          }
+          toast.success("¡Solicitud de inscripción enviada! Te contactaremos en 24h.");
+          setForm({ name: "", email: "", country: detectedCountryName || countryName });
+          onClose();
         } else if (validationError) {
           toast.error(validationError);
         } else if (!lastErr || (lastErr.message && !lastErr.message.startsWith("HTTP 4"))) {
@@ -622,7 +434,7 @@ function EnrollmentDialog({
         setSubmitting(false);
       }
     },
-    [course, form, onClose, region, detectedCountry]
+    [course, form, onClose, prices, pricingLabel, detectedCountryName, countryName]
   );
 
   return (
@@ -633,16 +445,14 @@ function EnrollmentDialog({
             Inscripción · {course?.name}
           </DialogTitle>
           <DialogDescription className="text-[#a1a1aa] text-sm mt-2">
-            Completa el formulario y te enviaremos por email el plan de mentoría
-            detallado del curso. Precio aplicado:{" "}
+            Completa el formulario y te enviaremos los pasos de pago y acceso
+            al curso. Precio aplicado:{" "}
             <span className="text-[#00c8b4] font-semibold">
               {course &&
-                formatPrice(
-                  region.prices[course.id as keyof typeof region.prices],
-                  region.symbol
-                )}{" "}
-              {region.currency}
+                formatPrice(prices[course.id as keyof typeof prices])}{" "}
+              USD
             </span>
+            <span className="text-[#71717a]"> · {pricingLabel}</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -677,16 +487,13 @@ function EnrollmentDialog({
           </div>
           <div>
             <Label htmlFor="enroll-country" className="text-xs uppercase tracking-wider text-[#a1a1aa]">
-              País {detectedCountry && <span className="text-[#00c8b4] normal-case tracking-normal font-normal ml-1">(detectado: {detectedCountry})</span>}
+              País {detectedCountryName && <span className="text-[#00c8b4] normal-case tracking-normal font-normal ml-1">(detectado automáticamente)</span>}
             </Label>
             <Input
               id="enroll-country"
               type="text"
               value={form.country}
-              onChange={(e) => {
-                setForm({ ...form, country: e.target.value });
-                setCountryTouched(true);
-              }}
+              onChange={(e) => setForm({ ...form, country: e.target.value })}
               className="bg-[#0a0a0f] border-[#1e1e2a] text-white mt-2 focus:border-[#00c8b4]"
               placeholder="Tu país"
             />
@@ -700,68 +507,6 @@ function EnrollmentDialog({
             {submitting ? "Enviando..." : "Confirmar inscripción"}
           </Button>
         </form>
-      </DialogContent>
-
-      {/* Diálogo con el plan de mentoría tras inscripción exitosa.
-          Se muestra como fallback cuando el email no llega (modo trial de
-          Resend: Gmail filtra onboarding@resend.dev). */}
-      <PlanDisplayDialog
-        html={planHtml}
-        subject={planSubject}
-        courseName={course?.name}
-        onClose={() => {
-          setPlanHtml(null);
-          setPlanSubject("");
-          setForm({ name: "", email: "", country: detectedCountry || region.label });
-          setCountryTouched(false);
-          onClose();
-        }}
-      />
-    </Dialog>
-  );
-}
-
-/**
- * Diálogo scrollable que renderiza el HTML del plan de mentoría recibido del
- * backend. Se usa `dangerouslySetInnerHTML` porque el HTML ya fue generado
- * por el backend con plantillas controladas (sin input del usuario crudo).
- */
-function PlanDisplayDialog({
-  html,
-  subject,
-  courseName,
-  onClose,
-}: {
-  html: string | null;
-  subject: string;
-  courseName?: string;
-  onClose: () => void;
-}) {
-  return (
-    <Dialog open={!!html} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="bg-[#0f0f17] border-[#1e1e2a] text-white max-w-3xl max-h-[90vh] overflow-y-auto p-8">
-        <DialogHeader>
-          <DialogTitle className="font-heading font-bold text-2xl text-white">
-            {subject || `Plan de mentoría${courseName ? ` — ${courseName}` : ""}`}
-          </DialogTitle>
-          <DialogDescription className="text-[#a1a1aa] text-sm mt-2">
-            También te enviamos este plan por email. Si no lo recibes en los próximos
-            minutos, revisa tu carpeta de spam o promociones.
-          </DialogDescription>
-        </DialogHeader>
-        <div
-          className="mt-4 prose prose-invert max-w-none"
-          dangerouslySetInnerHTML={{ __html: html || "" }}
-        />
-        <div className="mt-6 flex justify-end gap-3">
-          <Button
-            type="button"
-            onClick={onClose}
-            className="bg-[#00c8b4] text-[#0a0a0f] hover:bg-[#00e5d0] font-semibold"
-          >
-            Cerrar
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   );

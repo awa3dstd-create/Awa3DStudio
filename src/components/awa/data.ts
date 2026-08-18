@@ -709,10 +709,377 @@ export interface RegionPricing {
   regionalBadge?: boolean;
 }
 
+// ============================================================
+// COUNTRY-BASED PRICING (v8 — USD only, all countries included)
+// ============================================================
+// Pricing tiers calibrated to Purchasing Power Parity (PPP).
+// All prices are in USD — the currency the studio charges in.
+// Visitors are auto-detected by IP (Cloudflare CF-IPCountry header,
+// then ipapi.co fallback) and may override manually in the dropdown.
+
+export type PriceTier = "HIGH" | "MID" | "LATAM" | "LOW" | "CUBA";
+
+export const PRICE_TIERS: Record<
+  PriceTier,
+  {
+    prices: Record<"basic" | "intermediate" | "advanced" | "master", number>;
+    label: string;
+    regionalBadge: boolean;
+  }
+> = {
+  HIGH: {
+    prices: { basic: 149, intermediate: 299, advanced: 499, master: 899 },
+    label: "Tarifa internacional",
+    regionalBadge: false,
+  },
+  MID: {
+    prices: { basic: 99, intermediate: 199, advanced: 349, master: 629 },
+    label: "Tarifa regional",
+    regionalBadge: true,
+  },
+  LATAM: {
+    prices: { basic: 49, intermediate: 99, advanced: 169, master: 299 },
+    label: "Tarifa Latinoamérica",
+    regionalBadge: true,
+  },
+  LOW: {
+    prices: { basic: 35, intermediate: 69, advanced: 119, master: 219 },
+    label: "Tarifa regional",
+    regionalBadge: true,
+  },
+  CUBA: {
+    prices: { basic: 25, intermediate: 49, advanced: 89, master: 159 },
+    label: "Tarifa Cuba",
+    regionalBadge: true,
+  },
+};
+
+// ISO 3166-1 alpha-2 → PPP tier. Covers all 195 UN-recognized countries
+// + a few notable territories. Falls back to HIGH (international) if missing.
+export const COUNTRY_TIER: Record<string, PriceTier> = {
+  // ── CUBA (special pricing) ──
+  CU: "CUBA",
+
+  // ── LATAM (excl. Cuba, Mexico, Chile, Uruguay, Panamá, Costa Rica — those are MID) ──
+  BR: "LATAM", AR: "LATAM", CO: "LATAM", PE: "LATAM", VE: "LATAM",
+  EC: "LATAM", BO: "LATAM", PY: "LATAM", GT: "LATAM", HN: "LATAM",
+  SV: "LATAM", NI: "LATAM", DO: "LATAM", BZ: "LATAM", HT: "LATAM",
+  PR: "LATAM", JM: "LATAM", TT: "LATAM", BS: "LATAM", BB: "LATAM",
+  GY: "LATAM", SR: "LATAM", AG: "LATAM", DM: "LATAM", GD: "LATAM",
+  KN: "LATAM", LC: "LATAM", VC: "LATAM", BQ: "LATAM", CW: "LATAM",
+  SX: "LATAM", AW: "LATAM", BL: "LATAM", MF: "LATAM", VG: "LATAM",
+  VI: "LATAM", KY: "LATAM", BM: "LATAM", TC: "LATAM", MS: "LATAM",
+  AI: "LATAM", SH: "LATAM", FK: "LATAM", GS: "LATAM",
+
+  // ── MID (Mexico, Chile, Uruguay, Panamá, Costa Rica + Europe non-euro + Middle East + parts Asia) ──
+  MX: "MID", CL: "MID", UY: "MID", PA: "MID", CR: "MID",
+  // Eastern Europe non-Euro
+  PL: "MID", CZ: "MID", SK: "MID", HU: "MID", RO: "MID", BG: "MID",
+  RS: "MID", HR: "MID", BA: "MID", MK: "MID", ME: "MID", AL: "MID",
+  LT: "MID", LV: "MID", EE: "MID", MD: "MID", UA: "MID", BY: "MID",
+  RU: "MID", GE: "MID", AM: "MID", AZ: "MID", KZ: "MID", UZ: "MID",
+  TM: "MID", KG: "MID", TJ: "MID",
+  // Middle East
+  TR: "MID", LB: "MID", JO: "MID", IQ: "MID", SY: "MID", YE: "MID",
+  IR: "MID", AF: "MID", PS: "MID",
+  // Asia
+  MY: "MID", TH: "MID", BN: "MID", MV: "MID", CN: "MID",
+  // Africa (upper-mid)
+  ZA: "MID", MU: "MID", SC: "MID", BW: "MID", NA: "MID", GA: "MID",
+  GQ: "MID", LY: "MID",
+
+  // ── LOW (India-tier: South Asia, SE Asia, subsaharan Africa, North Africa) ──
+  IN: "LOW", PK: "LOW", BD: "LOW", LK: "LOW", NP: "LOW", BT: "LOW",
+  VN: "LOW", ID: "LOW", PH: "LOW", KH: "LOW", LA: "LOW", MM: "LOW",
+  TL: "LOW",
+  EG: "LOW", MA: "LOW", TN: "LOW", DZ: "LOW", SD: "LOW",
+  SS: "LOW", ET: "LOW", ER: "LOW", DJ: "LOW", SO: "LOW", KE: "LOW",
+  UG: "LOW", TZ: "LOW", RW: "LOW", BI: "LOW", MZ: "LOW", ZW: "LOW",
+  ZM: "LOW", MW: "LOW", MG: "LOW", CM: "LOW", NG: "LOW", GH: "LOW",
+  CI: "LOW", SN: "LOW", ML: "LOW", BF: "LOW", NE: "LOW", TD: "LOW",
+  CF: "LOW", CG: "LOW", CD: "LOW", AO: "LOW", GM: "LOW", GN: "LOW",
+  LR: "LOW", SL: "LOW", MR: "LOW", TG: "LOW", BJ: "LOW", EH: "LOW",
+  ST: "LOW", KM: "LOW", CV: "LOW", GW: "LOW",
+
+  // ── HIGH (US, CA, Western Europe, Nordics, Oceania, JP/KR/SG/HK, Gulf) ──
+  // Default tier — also covers any country not explicitly listed.
+  US: "HIGH", CA: "HIGH",
+  // Eurozone + Western Europe
+  DE: "HIGH", FR: "HIGH", ES: "HIGH", IT: "HIGH", NL: "HIGH", BE: "HIGH",
+  AT: "HIGH", IE: "HIGH", FI: "HIGH", PT: "HIGH", GR: "HIGH", LU: "HIGH",
+  SI: "HIGH", CY: "HIGH", MT: "HIGH",
+  // Non-Euro Western Europe
+  GB: "HIGH", CH: "HIGH", NO: "HIGH", SE: "HIGH", DK: "HIGH", IS: "HIGH",
+  LI: "HIGH", MC: "HIGH", SM: "HIGH", VA: "HIGH", AD: "HIGH",
+  // Oceania
+  AU: "HIGH", NZ: "HIGH", FJ: "HIGH", PG: "HIGH", SB: "HIGH", VU: "HIGH",
+  WS: "HIGH", TO: "HIGH", KI: "HIGH", TV: "HIGH", NR: "HIGH", PW: "HIGH",
+  MH: "HIGH", FM: "HIGH", CK: "HIGH", NU: "HIGH", NC: "HIGH", PF: "HIGH",
+  // East Asia (developed)
+  JP: "HIGH", KR: "HIGH", SG: "HIGH", HK: "HIGH", TW: "HIGH", MO: "HIGH",
+  // Gulf
+  AE: "HIGH", SA: "HIGH", QA: "HIGH", KW: "HIGH", BH: "HIGH", OM: "HIGH",
+  IL: "HIGH",
+  // Caribbean (developed)
+  GL: "HIGH",
+};
+
+// All countries for the dropdown — ISO 3166-1 alpha-2 + Spanish name.
+// Sorted alphabetically by Spanish name (with "España" using ñ ordering).
+export const COUNTRY_LIST: { code: string; name: string }[] = [
+  { code: "AF", name: "Afganistán" },
+  { code: "AL", name: "Albania" },
+  { code: "DE", name: "Alemania" },
+  { code: "AD", name: "Andorra" },
+  { code: "AO", name: "Angola" },
+  { code: "AG", name: "Antigua y Barbuda" },
+  { code: "SA", name: "Arabia Saudita" },
+  { code: "DZ", name: "Argelia" },
+  { code: "AR", name: "Argentina" },
+  { code: "AM", name: "Armenia" },
+  { code: "AU", name: "Australia" },
+  { code: "AT", name: "Austria" },
+  { code: "AZ", name: "Azerbaiyán" },
+  { code: "BS", name: "Bahamas" },
+  { code: "BD", name: "Bangladés" },
+  { code: "BB", name: "Barbados" },
+  { code: "BH", name: "Baréin" },
+  { code: "BE", name: "Bélgica" },
+  { code: "BZ", name: "Belice" },
+  { code: "BJ", name: "Benín" },
+  { code: "BY", name: "Bielorrusia" },
+  { code: "BO", name: "Bolivia" },
+  { code: "BA", name: "Bosnia y Herzegovina" },
+  { code: "BW", name: "Botsuana" },
+  { code: "BR", name: "Brasil" },
+  { code: "BN", name: "Brunéi" },
+  { code: "BG", name: "Bulgaria" },
+  { code: "BF", name: "Burkina Faso" },
+  { code: "BI", name: "Burundi" },
+  { code: "BT", name: "Bután" },
+  { code: "CV", name: "Cabo Verde" },
+  { code: "KH", name: "Camboya" },
+  { code: "CM", name: "Camerún" },
+  { code: "CA", name: "Canadá" },
+  { code: "TD", name: "Chad" },
+  { code: "CL", name: "Chile" },
+  { code: "CN", name: "China" },
+  { code: "CY", name: "Chipre" },
+  { code: "VA", name: "Ciudad del Vaticano" },
+  { code: "CO", name: "Colombia" },
+  { code: "KM", name: "Comoras" },
+  { code: "CG", name: "Congo" },
+  { code: "KP", name: "Corea del Norte" },
+  { code: "KR", name: "Corea del Sur" },
+  { code: "CI", name: "Costa de Marfil" },
+  { code: "CR", name: "Costa Rica" },
+  { code: "HR", name: "Croacia" },
+  { code: "CU", name: "Cuba" },
+  { code: "CW", name: "Curazao" },
+  { code: "DK", name: "Dinamarca" },
+  { code: "DM", name: "Dominica" },
+  { code: "EC", name: "Ecuador" },
+  { code: "EG", name: "Egipto" },
+  { code: "SV", name: "El Salvador" },
+  { code: "AE", name: "Emiratos Árabes Unidos" },
+  { code: "ER", name: "Eritrea" },
+  { code: "SK", name: "Eslovaquia" },
+  { code: "SI", name: "Eslovenia" },
+  { code: "ES", name: "España" },
+  { code: "US", name: "Estados Unidos" },
+  { code: "EE", name: "Estonia" },
+  { code: "SZ", name: "Esuatini" },
+  { code: "ET", name: "Etiopía" },
+  { code: "PH", name: "Filipinas" },
+  { code: "FI", name: "Finlandia" },
+  { code: "FJ", name: "Fiyi" },
+  { code: "FR", name: "Francia" },
+  { code: "GA", name: "Gabón" },
+  { code: "GM", name: "Gambia" },
+  { code: "GE", name: "Georgia" },
+  { code: "GH", name: "Ghana" },
+  { code: "GI", name: "Gibraltar" },
+  { code: "GD", name: "Granada" },
+  { code: "GR", name: "Grecia" },
+  { code: "GL", name: "Groenlandia" },
+  { code: "GT", name: "Guatemala" },
+  { code: "GG", name: "Guernsey" },
+  { code: "GN", name: "Guinea" },
+  { code: "GQ", name: "Guinea Ecuatorial" },
+  { code: "GW", name: "Guinea-Bisáu" },
+  { code: "GY", name: "Guyana" },
+  { code: "HT", name: "Haití" },
+  { code: "HN", name: "Honduras" },
+  { code: "HK", name: "Hong Kong" },
+  { code: "HU", name: "Hungría" },
+  { code: "IN", name: "India" },
+  { code: "ID", name: "Indonesia" },
+  { code: "IQ", name: "Irak" },
+  { code: "IR", name: "Irán" },
+  { code: "IE", name: "Irlanda" },
+  { code: "IS", name: "Islandia" },
+  { code: "BM", name: "Islas Bermudas" },
+  { code: "KY", name: "Islas Caimán" },
+  { code: "CK", name: "Islas Cook" },
+  { code: "FO", name: "Islas Feroe" },
+  { code: "MH", name: "Islas Marshall" },
+  { code: "PN", name: "Islas Pitcairn" },
+  { code: "SB", name: "Islas Salomón" },
+  { code: "TC", name: "Islas Turcas y Caicos" },
+  { code: "VG", name: "Islas Vírgenes Británicas" },
+  { code: "VI", name: "Islas Vírgenes de EE.UU." },
+  { code: "IM", name: "Isla de Man" },
+  { code: "JE", name: "Isla de Jersey" },
+  { code: "NU", name: "Isla Niue" },
+  { code: "IL", name: "Israel" },
+  { code: "IT", name: "Italia" },
+  { code: "JM", name: "Jamaica" },
+  { code: "JP", name: "Japón" },
+  { code: "JO", name: "Jordania" },
+  { code: "KZ", name: "Kazajistán" },
+  { code: "KE", name: "Kenia" },
+  { code: "KG", name: "Kirguistán" },
+  { code: "KI", name: "Kiribati" },
+  { code: "KW", name: "Kuwait" },
+  { code: "LA", name: "Laos" },
+  { code: "LS", name: "Lesoto" },
+  { code: "LV", name: "Letonia" },
+  { code: "LB", name: "Líbano" },
+  { code: "LR", name: "Liberia" },
+  { code: "LY", name: "Libia" },
+  { code: "LI", name: "Liechtenstein" },
+  { code: "LT", name: "Lituania" },
+  { code: "LU", name: "Luxemburgo" },
+  { code: "MO", name: "Macao" },
+  { code: "MK", name: "Macedonia del Norte" },
+  { code: "MG", name: "Madagascar" },
+  { code: "MY", name: "Malasia" },
+  { code: "MW", name: "Malaui" },
+  { code: "MV", name: "Maldivas" },
+  { code: "ML", name: "Mali" },
+  { code: "MT", name: "Malta" },
+  { code: "FK", name: "Malvinas" },
+  { code: "MA", name: "Marruecos" },
+  { code: "MR", name: "Mauritania" },
+  { code: "MU", name: "Mauricio" },
+  { code: "YT", name: "Mayotte" },
+  { code: "MX", name: "México" },
+  { code: "FM", name: "Micronesia" },
+  { code: "MD", name: "Moldavia" },
+  { code: "MC", name: "Mónaco" },
+  { code: "MN", name: "Mongolia" },
+  { code: "ME", name: "Montenegro" },
+  { code: "MS", name: "Montserrat" },
+  { code: "MZ", name: "Mozambique" },
+  { code: "MM", name: "Myanmar" },
+  { code: "NA", name: "Namibia" },
+  { code: "NR", name: "Nauru" },
+  { code: "NP", name: "Nepal" },
+  { code: "NI", name: "Nicaragua" },
+  { code: "NE", name: "Níger" },
+  { code: "NG", name: "Nigeria" },
+  { code: "NC", name: "Nueva Caledonia" },
+  { code: "NZ", name: "Nueva Zelanda" },
+  { code: "OM", name: "Omán" },
+  { code: "NL", name: "Países Bajos" },
+  { code: "PK", name: "Pakistán" },
+  { code: "PW", name: "Palaos" },
+  { code: "PS", name: "Palestina" },
+  { code: "PA", name: "Panamá" },
+  { code: "PG", name: "Papúa Nueva Guinea" },
+  { code: "PY", name: "Paraguay" },
+  { code: "PE", name: "Perú" },
+  { code: "PF", name: "Polinesia Francesa" },
+  { code: "PL", name: "Polonia" },
+  { code: "PT", name: "Portugal" },
+  { code: "GB", name: "Reino Unido" },
+  { code: "CF", name: "República Centroafricana" },
+  { code: "CD", name: "República Democrática del Congo" },
+  { code: "DO", name: "República Dominicana" },
+  { code: "RE", name: "Reunión" },
+  { code: "RW", name: "Ruanda" },
+  { code: "RO", name: "Rumania" },
+  { code: "RU", name: "Rusia" },
+  { code: "EH", name: "Sáhara Occidental" },
+  { code: "WS", name: "Samoa" },
+  { code: "AS", name: "Samoa Americana" },
+  { code: "BL", name: "San Bartolomé" },
+  { code: "KN", name: "San Cristóbal y Nieves" },
+  { code: "SM", name: "San Marino" },
+  { code: "MF", name: "San Martín" },
+  { code: "PM", name: "San Pedro y Miquelón" },
+  { code: "VC", name: "San Vicente y las Granadinas" },
+  { code: "SH", name: "Santa Elena" },
+  { code: "LC", name: "Santa Lucía" },
+  { code: "ST", name: "Santo Tomé y Príncipe" },
+  { code: "SN", name: "Senegal" },
+  { code: "RS", name: "Serbia" },
+  { code: "SC", name: "Seychelles" },
+  { code: "SL", name: "Sierra Leona" },
+  { code: "SG", name: "Singapur" },
+  { code: "SX", name: "Sint Maarten" },
+  { code: "SY", name: "Siria" },
+  { code: "SO", name: "Somalia" },
+  { code: "LK", name: "Sri Lanka" },
+  { code: "ZA", name: "Sudáfrica" },
+  { code: "SD", name: "Sudán" },
+  { code: "SS", name: "Sudán del Sur" },
+  { code: "SE", name: "Suecia" },
+  { code: "CH", name: "Suiza" },
+  { code: "SR", name: "Surinam" },
+  { code: "TH", name: "Tailandia" },
+  { code: "TW", name: "Taiwán" },
+  { code: "TZ", name: "Tanzania" },
+  { code: "TJ", name: "Tayikistán" },
+  { code: "TF", name: "Territorios Australes Franceses" },
+  { code: "TL", name: "Timor Oriental" },
+  { code: "TG", name: "Togo" },
+  { code: "TK", name: "Tokelau" },
+  { code: "TO", name: "Tonga" },
+  { code: "TT", name: "Trinidad y Tobago" },
+  { code: "TN", name: "Túnez" },
+  { code: "TM", name: "Turkmenistán" },
+  { code: "TR", name: "Turquía" },
+  { code: "TV", name: "Tuvalu" },
+  { code: "UA", name: "Ucrania" },
+  { code: "UG", name: "Uganda" },
+  { code: "UY", name: "Uruguay" },
+  { code: "UZ", name: "Uzbekistán" },
+  { code: "VU", name: "Vanuatu" },
+  { code: "VE", name: "Venezuela" },
+  { code: "VN", name: "Vietnam" },
+  { code: "WF", name: "Wallis y Futuna" },
+  { code: "YE", name: "Yemen" },
+  { code: "DJ", name: "Yibuti" },
+  { code: "ZM", name: "Zambia" },
+  { code: "ZW", name: "Zimbabue" },
+];
+
+// Map ISO code → Spanish country name (lookup for COUNTRY_LIST).
+export const COUNTRY_NAME_BY_CODE: Record<string, string> = Object.fromEntries(
+  COUNTRY_LIST.map(({ code, name }) => [code, name])
+);
+
 /**
- * Pricing calibrated to PPP (Purchasing Power Parity) of each region.
- * Base reference: international tier ≈ USD 149 / 299 / 499 / 899.
+ * Returns the pricing tier + USD prices for a given ISO country code.
+ * Falls back to HIGH (international USD pricing) for unknown codes.
  */
+export function getPricingForCountry(iso: string | undefined | null): {
+  tier: PriceTier;
+  prices: Record<"basic" | "intermediate" | "advanced" | "master", number>;
+  label: string;
+  regionalBadge: boolean;
+} {
+  if (!iso) return { tier: "HIGH", ...PRICE_TIERS.HIGH };
+  const tier = COUNTRY_TIER[iso.toUpperCase()] ?? "HIGH";
+  return { tier, ...PRICE_TIERS[tier] };
+}
+
+// ============================================================
+// LEGACY COMPATIBILITY — keep old exports as no-ops / aliases
+// so existing imports in courses.tsx don't break before migration.
+// These will be removed once courses.tsx is fully migrated.
+// ============================================================
 export const PRICING_BY_REGION: RegionPricing[] = [
   {
     code: "US",
@@ -720,141 +1087,6 @@ export const PRICING_BY_REGION: RegionPricing[] = [
     currency: "USD",
     symbol: "$",
     prices: { basic: 149, intermediate: 299, advanced: 499, master: 899 },
-  },
-  {
-    code: "CA",
-    label: "Canadá",
-    currency: "CAD",
-    symbol: "C$",
-    prices: { basic: 199, intermediate: 399, advanced: 669, master: 1199 },
-  },
-  {
-    code: "EU",
-    label: "Europa (Eurozona)",
-    currency: "EUR",
-    symbol: "€",
-    prices: { basic: 139, intermediate: 279, advanced: 469, master: 849 },
-  },
-  {
-    code: "UK",
-    label: "Reino Unido",
-    currency: "GBP",
-    symbol: "£",
-    prices: { basic: 119, intermediate: 239, advanced: 399, master: 729 },
-  },
-  {
-    code: "LATAM",
-    label: "América Latina",
-    currency: "USD",
-    symbol: "$",
-    prices: { basic: 49, intermediate: 99, advanced: 169, master: 299 },
-    regionalBadge: true,
-  },
-  {
-    code: "CU",
-    label: "Cuba",
-    currency: "USD",
-    symbol: "$",
-    prices: { basic: 25, intermediate: 49, advanced: 89, master: 159 },
-    regionalBadge: true,
-  },
-  {
-    code: "MX",
-    label: "México",
-    currency: "MXN",
-    symbol: "$",
-    prices: { basic: 899, intermediate: 1799, advanced: 2999, master: 5499 },
-    regionalBadge: true,
-  },
-  {
-    code: "BR",
-    label: "Brasil",
-    currency: "BRL",
-    symbol: "R$",
-    prices: { basic: 249, intermediate: 499, advanced: 849, master: 1549 },
-    regionalBadge: true,
-  },
-  {
-    code: "AR",
-    label: "Argentina",
-    currency: "ARS",
-    symbol: "$",
-    prices: { basic: 14999, intermediate: 29999, advanced: 49999, master: 89999 },
-    regionalBadge: true,
-  },
-  {
-    code: "JP",
-    label: "Japón",
-    currency: "JPY",
-    symbol: "¥",
-    prices: { basic: 19900, intermediate: 39900, advanced: 66900, master: 119900 },
-  },
-  {
-    code: "CN",
-    label: "China",
-    currency: "CNY",
-    symbol: "¥",
-    prices: { basic: 699, intermediate: 1399, advanced: 2399, master: 4299 },
-  },
-  {
-    code: "IN",
-    label: "India",
-    currency: "INR",
-    symbol: "₹",
-    prices: { basic: 4999, intermediate: 9999, advanced: 16999, master: 29999 },
-    regionalBadge: true,
-  },
-  {
-    code: "KR",
-    label: "Corea del Sur",
-    currency: "KRW",
-    symbol: "₩",
-    prices: { basic: 149000, intermediate: 299000, advanced: 499000, master: 899000 },
-  },
-  {
-    code: "AU",
-    label: "Australia",
-    currency: "AUD",
-    symbol: "A$",
-    prices: { basic: 219, intermediate: 439, advanced: 739, master: 1329 },
-  },
-  {
-    code: "AE",
-    label: "Emiratos Árabes",
-    currency: "AED",
-    symbol: "د.إ",
-    prices: { basic: 549, intermediate: 1099, advanced: 1839, master: 3299 },
-  },
-  {
-    code: "SA",
-    label: "Arabia Saudí",
-    currency: "SAR",
-    symbol: "﷼",
-    prices: { basic: 559, intermediate: 1129, advanced: 1889, master: 3379 },
-  },
-  {
-    code: "ZA",
-    label: "Sudáfrica",
-    currency: "ZAR",
-    symbol: "R",
-    prices: { basic: 1499, intermediate: 2999, advanced: 4999, master: 8999 },
-    regionalBadge: true,
-  },
-  {
-    code: "NG",
-    label: "Nigeria",
-    currency: "NGN",
-    symbol: "₦",
-    prices: { basic: 39999, intermediate: 79999, advanced: 134999, master: 244999 },
-    regionalBadge: true,
-  },
-  {
-    code: "EG",
-    label: "Egipto",
-    currency: "EGP",
-    symbol: "E£",
-    prices: { basic: 1999, intermediate: 3999, advanced: 6699, master: 11999 },
-    regionalBadge: true,
   },
   {
     code: "OTHER",
@@ -865,34 +1097,8 @@ export const PRICING_BY_REGION: RegionPricing[] = [
   },
 ];
 
-// Country code → region code mapping (subset; falls back to OTHER)
 export const COUNTRY_TO_REGION: Record<string, string> = {
   US: "US",
-  CA: "CA",
-  // Eurozone (subset)
-  DE: "EU", FR: "EU", ES: "EU", IT: "EU", NL: "EU", BE: "EU", AT: "EU",
-  IE: "EU", FI: "EU", PT: "EU", GR: "EU", LU: "EU", SK: "EU", SI: "EU",
-  LT: "EU", LV: "EU", EE: "EU", CY: "EU", MT: "EU",
-  // Non-euro EU
-  PL: "EU", CZ: "EU", HU: "EU", RO: "EU", BG: "EU", HR: "EU", SE: "EU",
-  DK: "EU", NO: "EU", IS: "EU", LI: "EU", CH: "EU",
-  GB: "UK",
-  // LATAM
-  MX: "MX", BR: "BR", AR: "AR",
-  CO: "LATAM", CL: "LATAM", PE: "LATAM", VE: "LATAM", EC: "LATAM",
-  UY: "LATAM", PY: "LATAM", BO: "LATAM", CR: "LATAM", PA: "LATAM",
-  GT: "LATAM", HN: "LATAM", SV: "LATAM", NI: "LATAM", DO: "LATAM",
-  CU: "CU",
-  // Asia
-  JP: "JP", CN: "CN", IN: "IN", KR: "KR",
-  // Oceania
-  AU: "AU", NZ: "AU",
-  // Middle East
-  AE: "AE", SA: "SA", QA: "AE", KW: "AE", BH: "AE", OM: "AE",
-  IL: "AE", JO: "AE", LB: "AE",
-  // Africa
-  ZA: "ZA", NG: "NG", EG: "EG",
-  KE: "ZA", GH: "ZA", MA: "EG", TN: "EG", DZ: "EG",
 };
 
 // ============================================================
