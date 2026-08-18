@@ -359,13 +359,22 @@ function EnrollmentDialog({
 }) {
   const [submitting, setSubmitting] = useState(false);
   // Pre-fill the country field with the IP-detected country name.
-  // `key` on the form forces re-mount when `course` changes so the field
-  // re-syncs with the latest detectedCountryName value each time the dialog opens.
   const [form, setForm] = useState({
     name: "",
     email: "",
     country: detectedCountryName || countryName,
   });
+
+  // Sync country field when dialog opens (course changes from null to a value)
+  // OR when the detected/selected country changes externally.
+  useEffect(() => {
+    if (course) {
+      setForm((prev) => ({
+        ...prev,
+        country: detectedCountryName || countryName,
+      }));
+    }
+  }, [course, detectedCountryName, countryName]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
